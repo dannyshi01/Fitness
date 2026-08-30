@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0f172a">
+<title>健身菜單 & 動作庫</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#1e293b; --panel2:#334155; --line:#334155;
+    --text:#f1f5f9; --muted:#94a3b8; --accent:#38bdf8; --accent2:#0ea5e9;
+    --good:#22c55e; --danger:#ef4444; --chip:#1e3a5f;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",Roboto,sans-serif;
+    background:var(--bg); color:var(--text); font-size:15px; line-height:1.5;
+    padding-bottom:76px;
+  }
+  header{
+    position:sticky; top:0; z-index:20; background:rgba(15,23,42,.92);
+    backdrop-filter:blur(8px); border-bottom:1px solid var(--line);
+    padding:12px 16px; display:flex; align-items:center; justify-content:space-between;
+  }
+  header h1{font-size:17px; margin:0; font-weight:700;}
+  .hbtns{display:flex; gap:8px;}
+  main{padding:16px; max-width:720px; margin:0 auto;}
+  h2.sec{font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin:20px 0 10px;}
+  button{font-family:inherit; cursor:pointer; border:none; border-radius:10px; font-size:14px;}
+  .btn{background:var(--panel2); color:var(--text); padding:8px 12px;}
+  .btn.primary{background:var(--accent2); color:#022; font-weight:700;}
+  .btn.ghost{background:transparent; border:1px solid var(--line); color:var(--muted); padding:7px 11px;}
+  .btn.sm{padding:5px 9px; font-size:13px;}
+  .btn.danger{background:transparent; color:var(--danger); border:1px solid var(--danger);}
+  input,select,textarea{
+    font-family:inherit; font-size:15px; width:100%; background:var(--panel); color:var(--text);
+    border:1px solid var(--line); border-radius:10px; padding:10px 12px; outline:none;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+  textarea{resize:vertical; min-height:60px;}
+  label{display:block; font-size:13px; color:var(--muted); margin:12px 0 5px;}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px;}
+  .row{display:flex; gap:8px; align-items:center;}
+  .row.wrap{flex-wrap:wrap;}
+  .spacer{flex:1;}
+  .muted{color:var(--muted);}
+  .small{font-size:13px;}
+  .chip{display:inline-flex; align-items:center; gap:4px; background:var(--chip); color:var(--accent);
+    padding:3px 9px; border-radius:999px; font-size:12px; white-space:nowrap;}
+  .chip.eq{background:#3b2f1e; color:#fbbf24;}
+  .chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;}
+  .tabbar{
+    position:fixed; bottom:0; left:0; right:0; z-index:30; display:flex;
+    background:var(--panel); border-top:1px solid var(--line);
+  }
+  .tabbar button{flex:1; background:transparent; color:var(--muted); padding:11px 0 max(11px,env(safe-area-inset-bottom));
+    font-size:12px; display:flex; flex-direction:column; align-items:center; gap:3px; border-radius:0;}
+  .tabbar button.active{color:var(--accent);}
+  .tabbar .ic{font-size:20px; line-height:1;}
+  .empty{text-align:center; color:var(--muted); padding:40px 20px;}
+  .empty .big{font-size:40px; margin-bottom:8px;}
+  /* modal */
+  .overlay{position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:40; display:none; align-items:flex-end; justify-content:center;}
+  .overlay.open{display:flex;}
+  .sheet{background:var(--bg); width:100%; max-width:720px; max-height:92vh; overflow:auto;
+    border-radius:18px 18px 0 0; border:1px solid var(--line); border-bottom:none; padding:18px 16px calc(24px + env(safe-area-inset-bottom));}
+  .sheet h3{margin:0 0 4px; font-size:18px;}
+  .sheethead{display:flex; align-items:center; margin-bottom:6px;}
+  .filters{display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:12px; -webkit-overflow-scrolling:touch;}
+  .filters::-webkit-scrollbar{display:none;}
+  .fchip{white-space:nowrap; background:var(--panel); border:1px solid var(--line); color:var(--muted);
+    padding:6px 12px; border-radius:999px; font-size:13px;}
+  .fchip.on{background:var(--accent2); color:#022; border-color:var(--accent2); font-weight:600;}
+  .ex-item{display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid var(--line);}
+  .ex-item:last-child{border-bottom:none;}
+  .ex-name{font-weight:600;}
+  .thumb{width:52px; height:52px; border-radius:10px; object-fit:cover; flex-shrink:0; background:var(--panel2);}
+  .imgprev{width:100%; max-height:200px; object-fit:cover; border-radius:12px; margin-top:8px; display:block;}
+  .imgrow{display:flex; gap:8px; align-items:center; margin-top:6px;}
+  .link{color:var(--accent); text-decoration:none;}
+  .setrow{display:grid; grid-template-columns:1fr 70px 70px auto; gap:8px; align-items:center; margin-bottom:8px;}
+  .setrow input{padding:8px; text-align:center;}
+  .setrow .nm{text-align:left; font-weight:600;}
+  .pick{display:flex; align-items:center; gap:10px; padding:11px 4px; border-bottom:1px solid var(--line);}
+  .pick input[type=checkbox]{width:20px; height:20px;}
+  .fab{position:fixed; right:16px; bottom:calc(72px + env(safe-area-inset-bottom)); z-index:25;
+    width:56px; height:56px; border-radius:50%; background:var(--accent2); color:#022; font-size:28px;
+    box-shadow:0 6px 20px rgba(14,165,233,.4); display:flex; align-items:center; justify-content:center; font-weight:300;}
+  .tagline{color:var(--muted); font-size:13px; margin-top:2px;}
+  .divide{height:1px; background:var(--line); margin:14px 0;}
+  .badge{font-size:11px; color:var(--muted);}
+  .day-item{display:flex; align-items:baseline; gap:8px; padding:6px 0;}
+  .day-item .n{font-weight:600;}
+  .day-item .d{color:var(--muted); font-size:13px;}
+  select.multi-src{}
+  .hint{font-size:12px; color:var(--muted); margin-top:4px;}
+  a{color:var(--accent);}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="hTitle">🏋️ 我的健身庫</h1>
+  <div class="hbtns">
+    <button class="btn ghost sm" id="btnExport">匯出</button>
+    <button class="btn ghost sm" id="btnImport">匯入</button>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<button class="fab" id="fab">＋</button>
+
+<nav class="tabbar">
+  <button data-tab="menus" class="active"><span class="ic">📋</span>菜單</button>
+  <button data-tab="library"><span class="ic">📚</span>動作庫</button>
+</nav>
+
+<!-- modal / sheet -->
+<div class="overlay" id="overlay">
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<input type="file" id="fileInput" accept="application/json" style="display:none">
+
+<script>
+/* ---------------- 資料層 ---------------- */
+const CATS = ["胸","背","腿","臀","肩","手臂","核心","有氧","全身","伸展"];
+const EQUIP = ["自體重量","啞鈴","槓鈴","機械","滑輪","壺鈴","彈力帶","其他"];
+const SOURCES = ["IG","YouTube","實體課","教練","自己","其他"];
+const KEY = "fitness_data_v1";
+
+let DB = load();
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return { exercises: seedExercises(), menus: [] };
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){ alert("儲存失敗:瀏覽器空間可能已滿"); } }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+function seedExercises(){
+  const mk=(name,cats,eq,src)=>({id:uid(),name,cats,equip:eq,source:src,sourceUrl:"",notes:"",createdAt:Date.now()});
+  return [
+    mk("槓鈴臥推",["胸"],"槓鈴","自己"),
+    mk("引體向上",["背"],"自體重量","自己"),
+    mk("深蹲",["腿","臀"],"槓鈴","自己"),
+    mk("肩推",["肩"],"啞鈴","自己"),
+    mk("硬舉",["背","腿","臀"],"槓鈴","自己"),
+  ];
+}
+
+/* ---------------- 狀態 ---------------- */
+let TAB = "menus";
+let libFilterCat = "全部";
+let libSearch = "";
+
+/* ---------------- 工具 ---------------- */
+const $ = s => document.querySelector(s);
+const esc = s => (s||"").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function exById(id){ return DB.exercises.find(e=>e.id===id); }
+
+// 把上傳圖片壓縮成最長邊 720px 的 JPEG,避免 localStorage 爆掉
+function compressImage(file, cb){
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const im=new Image();
+    im.onload=()=>{
+      const MAX=720; let {width:w,height:h}=im;
+      if(w>h && w>MAX){ h=Math.round(h*MAX/w); w=MAX; }
+      else if(h>=w && h>MAX){ w=Math.round(w*MAX/h); h=MAX; }
+      const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+      cv.getContext("2d").drawImage(im,0,0,w,h);
+      try{ cb(cv.toDataURL("image/jpeg",0.8)); }
+      catch(err){ alert("圖片處理失敗"); }
+    };
+    im.onerror=()=>alert("無法讀取圖片");
+    im.src=reader.result;
+  };
+  reader.onerror=()=>alert("讀取檔案失敗");
+  reader.readAsDataURL(file);
+}
+
+/* ---------------- 渲染 ---------------- */
+function render(){
+  document.querySelectorAll(".tabbar button").forEach(b=>b.classList.toggle("active", b.dataset.tab===TAB));
+  $("#hTitle").textContent = TAB==="menus" ? "📋 訓練菜單" : "📚 動作庫";
+  $("#app").innerHTML = TAB==="menus" ? renderMenus() : renderLibrary();
+  wire();
+}
+
+function renderMenus(){
+  if(!DB.menus.length){
+    return `<div class="empty"><div class="big">📋</div>還沒有菜單<br><span class="small">點右下角 ＋ 建立一個訓練日課表</span></div>`;
+  }
+  return DB.menus.map(m=>{
+    const items = m.items.map(it=>{
+      const ex = exById(it.exId);
+      if(!ex) return "";
+      const detail = [it.sets&&`${it.sets}組`, it.reps&&`${it.reps}下`, it.weight&&`${it.weight}`].filter(Boolean).join(" × ");
+      return `<div class="day-item"><span class="n">${esc(ex.name)}</span><span class="d">${esc(detail)}</span></div>`;
+    }).join("");
+    return `<div class="card">
+      <div class="row">
+        <div><strong style="font-size:16px">${esc(m.name)}</strong>
+          <div class="tagline">${m.items.length} 個動作${m.notes?" · "+esc(m.notes):""}</div></div>
+        <div class="spacer"></div>
+        <button class="btn sm" data-editmenu="${m.id}">編輯</button>
+      </div>
+      <div class="divide"></div>
+      ${items || '<div class="muted small">尚未加入動作</div>'}
+    </div>`;
+  }).join("");
+}
+
+function renderLibrary(){
+  const filterChips = ["全部",...CATS].map(c=>
+    `<button class="fchip ${libFilterCat===c?'on':''}" data-cat="${c}">${c}</button>`).join("");
+  let list = DB.exercises.slice().sort((a,b)=>b.createdAt-a.createdAt);
+  if(libFilterCat!=="全部") list = list.filter(e=>e.cats.includes(libFilterCat));
+  if(libSearch) list = list.filter(e=>e.name.toLowerCase().includes(libSearch.toLowerCase()));
+
+  const items = list.length ? list.map(e=>{
+    const cats = e.cats.map(c=>`<span class="chip">${esc(c)}</span>`).join("");
+    const eq = e.equip?`<span class="chip eq">${esc(e.equip)}</span>`:"";
+    const src = e.sourceUrl
+      ? `<a class="link small" href="${esc(e.sourceUrl)}" target="_blank" rel="noopener">🔗 ${esc(e.source||"來源")}</a>`
+      : (e.source?`<span class="badge">來源:${esc(e.source)}</span>`:"");
+    const thumb = e.imageData ? `<img class="thumb" src="${e.imageData}" alt="">` : "";
+    return `<div class="ex-item">
+      ${thumb}
+      <div style="flex:1; min-width:0">
+        <div class="ex-name">${esc(e.name)}</div>
+        <div class="chips">${cats}${eq}</div>
+        ${e.notes?`<div class="tagline">📝 ${esc(e.notes)}</div>`:""}
+        ${src?`<div style="margin-top:4px">${src}</div>`:""}
+      </div>
+      <button class="btn ghost sm" data-editex="${e.id}">編輯</button>
+    </div>`;
+  }).join("") : `<div class="empty"><div class="big">🔍</div>沒有符合的動作</div>`;
+
+  return `
+    <input id="libSearch" placeholder="🔍 搜尋動作…" value="${esc(libSearch)}" style="margin-bottom:12px">
+    <div class="filters">${filterChips}</div>
+    <div class="card" style="padding:4px 14px">${items}</div>
+    <div class="hint" style="text-align:center; margin-top:14px">共 ${DB.exercises.length} 個動作 · 點右下角 ＋ 快速新增</div>`;
+}
+
+/* ---------------- 事件綁定 ---------------- */
+function wire(){
+  document.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{ libFilterCat=b.dataset.cat; render(); });
+  const s=$("#libSearch"); if(s){ s.oninput=e=>{ libSearch=e.target.value; const el=$("#app"); const pos=s.selectionStart;
+    render(); const ns=$("#libSearch"); if(ns){ns.focus(); ns.setSelectionRange(pos,pos);} }; }
+  document.querySelectorAll("[data-editex]").forEach(b=>b.onclick=()=>openExerciseForm(b.dataset.editex));
+  document.querySelectorAll("[data-editmenu]").forEach(b=>b.onclick=()=>openMenuForm(b.dataset.editmenu));
+}
+
+/* ---------------- Sheet 控制 ---------------- */
+function openSheet(html){ $("#sheet").innerHTML=html; $("#overlay").classList.add("open"); }
+function closeSheet(){ $("#overlay").classList.remove("open"); }
+$("#overlay").addEventListener("click",e=>{ if(e.target.id==="overlay") closeSheet(); });
+
+/* ---------------- 動作表單 ---------------- */
+function openExerciseForm(id){
+  const e = id? exById(id) : {name:"",cats:[],equip:"",source:"",sourceUrl:"",notes:""};
+  const catBtns = CATS.map(c=>`<button type="button" class="fchip ${e.cats.includes(c)?'on':''}" data-tc="${c}">${c}</button>`).join("");
+  const eqOpts = ['<option value="">器材(選填)</option>',...EQUIP.map(x=>`<option ${e.equip===x?'selected':''}>${x}</option>`)].join("");
+  const srcOpts = ['<option value="">來源(選填)</option>',...SOURCES.map(x=>`<option ${e.source===x?'selected':''}>${x}</option>`)].join("");
+  openSheet(`
+    <div class="sheethead"><h3>${id?'編輯動作':'新增動作'}</h3><div class="spacer"></div>
+      <button class="btn ghost sm" id="cxx">取消</button></div>
+    <label>動作名稱 *</label>
+    <input id="fName" value="${esc(e.name)}" placeholder="例:保加利亞分腿蹲" autofocus>
+    <label>部位分類 <span class="muted">(可多選,先選一個也行)</span></label>
+    <div class="filters" id="catPick" style="flex-wrap:wrap; overflow:visible">${catBtns}</div>
+    <div class="row" style="gap:8px">
+      <div style="flex:1"><label>器材</label><select id="fEquip">${eqOpts}</select></div>
+      <div style="flex:1"><label>來源</label><select id="fSource">${srcOpts}</select></div>
+    </div>
+    <label>來源連結 <span class="muted">(IG / YouTube 網址,選填)</span></label>
+    <input id="fUrl" value="${esc(e.sourceUrl)}" placeholder="https://www.instagram.com/…" inputmode="url">
+    <label>筆記 / 教練提示</label>
+    <textarea id="fNotes" placeholder="例:膝蓋不超過腳尖、核心收緊…">${esc(e.notes)}</textarea>
+    <label>動作示範圖片 <span class="muted">(選填,可拍照或截圖)</span></label>
+    <div class="imgrow">
+      <button type="button" class="btn sm" id="pickImg">📷 選擇圖片</button>
+      <button type="button" class="btn ghost sm" id="clrImg" style="${e.imageData?'':'display:none'}">移除</button>
+    </div>
+    <img id="imgPrev" class="imgprev" src="${e.imageData||''}" style="${e.imageData?'':'display:none'}">
+    <input type="file" id="fImgFile" accept="image/*" style="display:none">
+    <div class="row" style="margin-top:18px; gap:8px">
+      ${id?`<button class="btn danger sm" id="delEx">刪除</button>`:""}
+      <div class="spacer"></div>
+      <button class="btn primary" id="saveEx" style="padding:11px 20px">儲存</button>
+    </div>
+  `);
+  let sel = [...e.cats];
+  let img = e.imageData || "";
+  document.querySelectorAll("#catPick [data-tc]").forEach(b=>b.onclick=()=>{
+    const c=b.dataset.tc; if(sel.includes(c)) sel=sel.filter(x=>x!==c); else sel.push(c);
+    b.classList.toggle("on");
+  });
+  $("#pickImg").onclick=()=>$("#fImgFile").click();
+  $("#clrImg").onclick=()=>{ img=""; $("#imgPrev").style.display="none"; $("#clrImg").style.display="none"; };
+  $("#fImgFile").onchange=ev=>{
+    const f=ev.target.files[0]; if(!f) return;
+    compressImage(f, dataUrl=>{ img=dataUrl;
+      $("#imgPrev").src=dataUrl; $("#imgPrev").style.display="block"; $("#clrImg").style.display="inline-flex"; });
+    ev.target.value="";
+  };
+  $("#cxx").onclick=closeSheet;
+  if(id) $("#delEx").onclick=()=>{ if(confirm("確定刪除這個動作?")){ DB.exercises=DB.exercises.filter(x=>x.id!==id);
+    DB.menus.forEach(m=>m.items=m.items.filter(it=>it.exId!==id)); save(); closeSheet(); render(); } };
+  $("#saveEx").onclick=()=>{
+    const name=$("#fName").value.trim();
+    if(!name){ alert("請輸入動作名稱"); return; }
+    const data={ name, cats:sel, equip:$("#fEquip").value, source:$("#fSource").value,
+      sourceUrl:$("#fUrl").value.trim(), notes:$("#fNotes").value.trim(), imageData:img };
+    if(id){ Object.assign(exById(id), data); }
+    else { DB.exercises.push({id:uid(), createdAt:Date.now(), ...data}); }
+    save(); closeSheet(); render();
+  };
+}
+
+/* ---------------- 菜單表單 ---------------- */
+function openMenuForm(id){
+  const m = id? DB.menus.find(x=>x.id===id) : {name:"",notes:"",items:[]};
+  let items = JSON.parse(JSON.stringify(m.items));
+  function draw(){
+    const rows = items.map((it,i)=>{
+      const ex=exById(it.exId); if(!ex) return "";
+      return `<div class="setrow">
+        <div class="nm">${esc(ex.name)}</div>
+        <input data-f="sets" data-i="${i}" value="${esc(it.sets||"")}" placeholder="組" inputmode="numeric">
+        <input data-f="reps" data-i="${i}" value="${esc(it.reps||"")}" placeholder="次" inputmode="numeric">
+        <button class="btn ghost sm" data-rm="${i}">✕</button>
+      </div>`;
+    }).join("");
+    openSheet(`
+      <div class="sheethead"><h3>${id?'編輯菜單':'新增菜單'}</h3><div class="spacer"></div>
+        <button class="btn ghost sm" id="cxx">取消</button></div>
+      <label>菜單名稱 *</label>
+      <input id="mName" value="${esc(m.name)}" placeholder="例:週一 · 推日(胸肩三頭)">
+      <label>備註</label>
+      <input id="mNotes" value="${esc(m.notes)}" placeholder="例:每組間休息 90 秒">
+      <label style="margin-top:16px">動作清單 <span class="muted">(填組數 × 次數)</span></label>
+      <div>${rows||'<div class="muted small" style="padding:6px 0">還沒加入動作</div>'}</div>
+      <button class="btn" id="addItem" style="width:100%; margin-top:8px">＋ 從動作庫加入</button>
+      <div class="row" style="margin-top:18px; gap:8px">
+        ${id?`<button class="btn danger sm" id="delMenu">刪除</button>`:""}
+        <div class="spacer"></div>
+        <button class="btn primary" id="saveMenu" style="padding:11px 20px">儲存菜單</button>
+      </div>
+    `);
+    function sync(){ m.name=$("#mName").value; m.notes=$("#mNotes").value; }
+    document.querySelectorAll("[data-f]").forEach(inp=>inp.oninput=()=>{ items[inp.dataset.i][inp.dataset.f]=inp.value; });
+    document.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{ sync(); items.splice(+b.dataset.rm,1); draw(); });
+    $("#cxx").onclick=closeSheet;
+    $("#addItem").onclick=()=>{ sync(); openPicker(items.map(x=>x.exId), chosen=>{
+      chosen.forEach(exId=>{ if(!items.find(x=>x.exId===exId)) items.push({exId,sets:"",reps:""}); }); draw(); }); };
+    if(id) $("#delMenu").onclick=()=>{ if(confirm("確定刪除這個菜單?")){ DB.menus=DB.menus.filter(x=>x.id!==id); save(); closeSheet(); render(); } };
+    $("#saveMenu").onclick=()=>{
+      const name=$("#mName").value.trim(); if(!name){ alert("請輸入菜單名稱"); return; }
+      const notes=$("#mNotes").value.trim();
+      if(id){ m.name=name; m.notes=notes; m.items=items; }
+      else { DB.menus.push({id:uid(), name, notes, items, createdAt:Date.now()}); }
+      save(); closeSheet(); render();
+    };
+  }
+  draw();
+}
+
+/* ---------------- 動作選擇器 ---------------- */
+function openPicker(already, cb){
+  let picked = new Set();
+  let q="";
+  function draw(){
+    let list=DB.exercises.slice().sort((a,b)=>b.createdAt-a.createdAt);
+    if(q) list=list.filter(e=>e.name.toLowerCase().includes(q.toLowerCase()));
+    const rows=list.map(e=>{
+      const inMenu=already.includes(e.id);
+      return `<label class="pick">
+        <input type="checkbox" data-p="${e.id}" ${picked.has(e.id)?'checked':''} ${inMenu?'disabled':''}>
+        <div style="flex:1"><div class="ex-name">${esc(e.name)} ${inMenu?'<span class="badge">已在菜單</span>':''}</div>
+          <div class="chips">${e.cats.map(c=>`<span class="chip">${esc(c)}</span>`).join("")}</div></div>
+      </label>`;
+    }).join("") || '<div class="empty small">找不到動作,先去動作庫新增</div>';
+    openSheet(`
+      <div class="sheethead"><h3>選擇動作</h3><div class="spacer"></div>
+        <button class="btn ghost sm" id="pclose">關閉</button></div>
+      <input id="pq" placeholder="🔍 搜尋…" value="${esc(q)}" style="margin-bottom:10px">
+      <div>${rows}</div>
+      <button class="btn primary" id="pdone" style="width:100%; margin-top:14px; padding:12px">加入所選 (${picked.size})</button>
+    `);
+    $("#pq").oninput=e=>{ q=e.target.value; draw(); };
+    document.querySelectorAll("[data-p]").forEach(cb2=>cb2.onchange=()=>{
+      if(cb2.checked) picked.add(cb2.dataset.p); else picked.delete(cb2.dataset.p);
+      $("#pdone").textContent=`加入所選 (${picked.size})`;
+    });
+    $("#pclose").onclick=()=>openMenuBack();
+    $("#pdone").onclick=()=>{ cb([...picked]); };
+  }
+  // 回到菜單表單(取消加入)
+  function openMenuBack(){ cb([]); }
+  draw();
+}
+
+/* ---------------- FAB ---------------- */
+$("#fab").onclick=()=>{ if(TAB==="menus") openMenuForm(null); else openExerciseForm(null); };
+
+/* ---------------- Tab 切換 ---------------- */
+document.querySelectorAll(".tabbar button").forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; render(); });
+
+/* ---------------- 匯出 / 匯入 ---------------- */
+$("#btnExport").onclick=()=>{
+  const blob=new Blob([JSON.stringify(DB,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob); const a=document.createElement("a");
+  a.href=url; a.download="fitness-backup-"+new Date().toISOString().slice(0,10)+".json"; a.click();
+  URL.revokeObjectURL(url);
+};
+$("#btnImport").onclick=()=>$("#fileInput").click();
+$("#fileInput").onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{ const d=JSON.parse(r.result);
+    if(d.exercises&&d.menus){ if(confirm("匯入將覆蓋現有資料,確定?")){ DB=d; save(); render(); } }
+    else alert("檔案格式不正確"); }catch(err){ alert("讀取失敗"); } };
+  r.readAsText(f); e.target.value="";
+};
+
+/* ---------------- 啟動 ---------------- */
+render();
+</script>
+</body>
+</html>

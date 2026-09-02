@@ -93,6 +93,27 @@
   .day-item{display:flex; align-items:baseline; gap:8px; padding:6px 0;}
   .day-item .n{font-weight:600;}
   .day-item .d{color:var(--muted); font-size:13px;}
+  /* framework */
+  .fw-intro{color:var(--muted); font-size:13px; line-height:1.6; margin-bottom:14px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px;}
+  details.fw{padding:0; overflow:hidden;}
+  details.fw summary{list-style:none; cursor:pointer; padding:14px; display:flex; flex-direction:column; gap:4px;}
+  details.fw summary::-webkit-details-marker{display:none;}
+  details.fw summary::after{content:"▾"; position:absolute; right:16px; color:var(--muted); transition:transform .2s;}
+  details.fw{position:relative;}
+  details.fw[open] summary::after{transform:rotate(180deg);}
+  .fw-zone{font-weight:700; font-size:16px; color:var(--accent);}
+  .fw-main{color:var(--text); font-size:13px; line-height:1.5; padding-right:20px;}
+  .fw-body{padding:0 14px 14px; border-top:1px solid var(--line); margin-top:2px; padding-top:12px;}
+  .fw-line{display:flex; gap:10px; margin-bottom:8px; font-size:13px;}
+  .fw-k{flex-shrink:0; width:64px; color:var(--muted);}
+  .fw-line .warn{color:#fbbf24;}
+  .fw-prog{display:flex; flex-direction:column; gap:8px; margin-top:12px;}
+  .fw-step{display:flex; gap:8px; align-items:baseline; font-size:13px; line-height:1.5;}
+  .fw-badge{flex-shrink:0; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px;}
+  .fw-badge.reg{background:#1e3a3a; color:#5eead4;}
+  .fw-badge.base{background:#1e3a5f; color:#7dd3fc;}
+  .fw-badge.adv{background:#3a1e3a; color:#f0abfc;}
   select.multi-src{}
   .hint{font-size:12px; color:var(--muted); margin-top:4px;}
   a{color:var(--accent);}
@@ -114,6 +135,7 @@
 <nav class="tabbar">
   <button data-tab="menus" class="active"><span class="ic">📋</span>菜單</button>
   <button data-tab="library"><span class="ic">📚</span>動作庫</button>
+  <button data-tab="framework"><span class="ic">📖</span>框架</button>
 </nav>
 
 <!-- modal / sheet -->
@@ -125,10 +147,24 @@
 
 <script>
 /* ---------------- 資料層 ---------------- */
-const CATS = ["胸","背","腿","臀","肩","手臂","核心","有氧","全身","伸展"];
+const CATS = ["胸","背","腿","臀","肩","手臂","核心","腳踝穩定","重心轉移","爆發跳躍","有氧","伸展","全身"];
 const EQUIP = ["自體重量","啞鈴","槓鈴","機械","滑輪","壺鈴","彈力帶","其他"];
 const SOURCES = ["IG","YouTube","實體課","教練","自己","其他"];
-const KEY = "fitness_data_v1";
+const KEY = "fitness_data_v2";
+
+// 依身體區域的訓練框架(參考用,唯讀)
+const FRAMEWORK = [
+  {zone:"呼吸 / 核心", main:"仰臥 90/90 呼吸、死蟲、棒式、熊爬、鳥狗", muscle:"橫膈膜、腹橫肌、骨盆底、多裂肌", comp:"胸鎖乳突肌、斜角肌、上斜方肌", regress:"仰躺支撐、膝跪棒式", base:"死蟲、棒式", advance:"動態手腳移動、壺鈴熊爬"},
+  {zone:"頸椎", main:"下巴收、頸部控制", muscle:"深層頸屈肌", comp:"胸鎖乳突肌、斜角肌 → 頭前伸", regress:"仰臥下巴收", base:"四足跪頸控", advance:"負重頭頂中立"},
+  {zone:"胸椎", main:"貓牛式、開書式、弓步旋轉", muscle:"胸椎伸展肌、旋轉肌群", comp:"腰椎過伸、骨盆旋轉代償", regress:"坐姿胸椎轉動", base:"側臥開書式", advance:"弓步旋轉 + 過頭舉"},
+  {zone:"腰椎", main:"死蟲、Bird-dog、Pallof Press", muscle:"腹橫肌、多裂肌", comp:"腰椎伸肌代償(過伸/過屈)", regress:"單腳/單手死蟲", base:"Bird-dog", advance:"功能動作保持中立"},
+  {zone:"骨盆 / 髖", main:"橋式、側臥抬腿、弓步、硬舉", muscle:"臀大肌、臀中肌、髂腰肌", comp:"腰椎過伸、腿後肌代償、Trendelenburg", regress:"臀橋、側臥抬腿", base:"弓步、壺鈴硬舉", advance:"單腳硬舉、側向負重走"},
+  {zone:"肩胛", main:"肩胛上抬/下壓/前引/後收、牆面滑手", muscle:"前鋸肌、斜方肌下束、菱形肌", comp:"聳肩、翼狀肩胛", regress:"靠牆滑動", base:"四足跪肩胛控制", advance:"TRX 划船、壺鈴肩推"},
+  {zone:"肩關節", main:"推舉、拉動、外旋", muscle:"三角肌、旋轉肌群、胸大肌", comp:"聳肩、腰椎過伸", regress:"彈力帶外旋", base:"啞鈴肩推、划船", advance:"引體向上、過頭推舉"},
+  {zone:"膝關節", main:"深蹲、分腿蹲、弓步", muscle:"股四頭肌、膕繩肌", comp:"膝內扣、髖代償", regress:"椅子深蹲、半蹲", base:"標準深蹲、分腿蹲", advance:"單腳深蹲、跳躍深蹲"},
+  {zone:"踝關節", main:"踝背屈、蹠屈、單腳平衡", muscle:"脛前肌、腓腸肌、比目魚肌", comp:"足內翻/外翻、髖膝代償", regress:"靠牆踝背屈", base:"半蹲踝背屈", advance:"單腳跳、方向變換"},
+  {zone:"整合功能", main:"半蹲 → 站立、步態、搬運", muscle:"全身協調、核心控制", comp:"腰椎代償、肩頸過緊", regress:"低負荷轉換、慢走", base:"標準步態、半蹲起立", advance:"負重農夫走、跨步推拉"},
+];
 
 let DB = load();
 function load(){
@@ -142,13 +178,59 @@ function save(){ try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){ 
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
 function seedExercises(){
-  const mk=(name,cats,eq,src)=>({id:uid(),name,cats,equip:eq,source:src,sourceUrl:"",notes:"",createdAt:Date.now()});
+  let t=Date.now();
+  const mk=(name,cats,eq,src,notes)=>({id:uid(),name,cats,equip:eq,source:src||"",sourceUrl:"",imageData:"",notes:notes||"",createdAt:t--});
   return [
+    // 腳踝穩定
+    mk("單腳站立",["腳踝穩定"],"自體重量","自己","站立類。單腳站立,訓練本體感覺與平衡。"),
+    mk("米字腳",["腳踝穩定"],"自體重量","自己","站立類。單腳為軸心,腳往八個方向點地(米字)。"),
+    mk("單腳蹲",["腳踝穩定","腿"],"自體重量","自己","站立類。單腳為軸心做深蹲,不行可扶牆。"),
+    mk("彈力帶輔助拉腳踝",["腳踝穩定"],"彈力帶","自己","彈力帶綁在一側,腳踝向反方向拉做對抗,強化腳踝剛性;也可用手拉、使腳踝往下對抗。"),
+    mk("單腳跳(米字八方向)",["腳踝穩定","爆發跳躍"],"自體重量","自己","跳躍/動態類。【進階】單腳往八個方向跳(米字)。"),
+    // 重心轉移(築健)
+    mk("單邊重心轉移",["重心轉移","肩"],"啞鈴","實體課","【築健】開始前雙腳站立注意重心(在腳背前一點點,我習慣往後)。雙手拿球或輕重量,一邊慢慢肩推往上;當有點卡住時,開始把重心往另一邊壓,並持續把肩往上推,肩膀不要有出力不適的感覺。重心不是用腰代償去推,而是用臀外側肌力去推。"),
+    mk("髖部重心左右轉移(交叉腳)",["重心轉移","腿","臀"],"啞鈴","實體課","【築健】雙腳站立注意重心。右手拿啞鈴往外甩,往內時把啞鈴提起停住;右腳往左腳後踩,再用右腳往外踩成右弓箭步、左腳伸直;啞鈴手過頭往左側帶。"),
+    mk("分腿高跪姿",["重心轉移","臀","核心"],"啞鈴","實體課","【築健】雙手拿單顆啞鈴(右腳高跪)。手往『左下—右上』擺動,腿也跟著:往上時往前、往下時往後。往上會感到前髖被伸展,往下覺得大腿痠;手擺動時身體稍微跟著旋轉。"),
+    // 爆發/跳躍
+    mk("落地跳接深跳",["爆發跳躍","腿"],"自體重量","自己","從高處落地緩衝後,立刻接一個深跳(depth jump)。"),
+    mk("單腳跳箱 (single leg hop by box)",["爆發跳躍","腳踝穩定"],"自體重量","自己","單腳跳上/跳過箱子。"),
+    // 胸
+    mk("啞鈴臥推",["胸"],"啞鈴","自己"),
+    mk("啞鈴上胸推",["胸"],"啞鈴","自己","上斜,練上胸。"),
     mk("槓鈴臥推",["胸"],"槓鈴","自己"),
+    mk("槓鈴上胸",["胸"],"槓鈴","自己","上斜槓鈴臥推,練上胸。"),
+    mk("滑輪飛鳥",["胸"],"滑輪","自己"),
+    mk("雙槓撐體",["胸","手臂"],"自體重量","自己","【進階】身體前傾偏胸,直立偏三頭。"),
+    // 背
     mk("引體向上",["背"],"自體重量","自己"),
-    mk("深蹲",["腿","臀"],"槓鈴","自己"),
-    mk("肩推",["肩"],"啞鈴","自己"),
-    mk("硬舉",["背","腿","臀"],"槓鈴","自己"),
+    mk("滑輪下拉(坐姿)",["背"],"滑輪","自己"),
+    mk("滑輪直槓下拉(站姿)",["背"],"滑輪","自己","站姿,直槓下拉。"),
+    mk("臉拉",["背","肩"],"滑輪","自己","練後三角與上背。"),
+    // 腿
+    mk("相撲槓鈴硬舉",["腿","臀"],"槓鈴","自己","相撲站姿,練大腿內側與臀。"),
+    mk("相撲啞鈴硬舉",["腿","臀"],"啞鈴","實體課","【築健】啞鈴雙手,重心微往前;屁股重點要往後往下,避免用膝蓋帶動。做的時候會有大腿內側緊緊的,腳板也會在靠近內側的地方有感受。"),
+    mk("分腿蹲",["腿","臀"],"自體重量","實體課","【築健】重心稍放前(約腳板中間與小腿交界),後腳往後為墊;屁股往後往下坐,重點往下,身體不要為了平衡而前後壓。左腳多練,會感到後腿與臀交界、大腿內側緊。"),
+    mk("單腳硬舉",["腿","臀","腳踝穩定"],"啞鈴","自己","單腿羅馬尼亞硬舉,兼練平衡與腳踝穩定。"),
+    mk("壺鈴擺盪",["臀","腿","全身"],"壺鈴","自己","爆發力類。髖鉸鏈發力。"),
+    mk("背槓深蹲跳",["腿","爆發跳躍"],"槓鈴","自己","爆發力類。背槓深蹲後爆發跳起(用輕重量)。"),
+    // 肩
+    mk("滑輪側平舉",["肩"],"滑輪","自己","練中三角。"),
+    mk("後三角(機械)",["肩"],"機械","自己","反向飛鳥,練後三角。"),
+    mk("前鋸肌(肩夾擠)",["肩","核心"],"自體重量","自己","肩胛前引(protraction),練前鋸肌。"),
+    mk("扶牆Y字",["肩"],"自體重量","自己","面牆,手臂沿牆做 Y 字上舉,練下斜方與肩胛穩定。"),
+    // 核心 / 矯正(來自訓練框架表)
+    mk("90/90 呼吸",["核心"],"自體重量","自己","仰臥,髖膝各 90 度。用橫膈膜呼吸、肋骨下沉,啟動腹橫肌與骨盆底;避免用頸部(胸鎖乳突肌/斜角肌)代償。"),
+    mk("死蟲 (Dead Bug)",["核心"],"自體重量","自己","仰臥,對側手腳緩慢伸展,腰椎全程貼地保持中立。退階可單手/單腳。"),
+    mk("鳥狗 (Bird-dog)",["核心","背"],"自體重量","自己","四足跪姿,對側手腳伸直保持軀幹穩定,避免骨盆旋轉。"),
+    mk("棒式 (Plank)",["核心"],"自體重量","自己","肘撐,身體一直線,骨盆後傾避免腰椎過伸。退階可膝跪。"),
+    mk("熊爬 (Bear Crawl)",["核心","全身"],"自體重量","自己","四足懸膝,對側手腳小步移動,核心穩定不搖晃。進階可壺鈴負重。"),
+    mk("貓牛式",["伸展","核心"],"自體重量","自己","四足跪姿,脊椎逐節屈伸,活動胸椎。"),
+    mk("開書式(胸椎旋轉)",["伸展"],"自體重量","自己","側臥,上手畫大圈往後開,轉動來自胸椎、避免腰椎代償。"),
+    mk("Pallof Press",["核心"],"滑輪","自己","側對滑輪/彈力帶,雙手前推抗旋轉,腰椎保持中立。"),
+    mk("臀橋(橋式)",["臀"],"自體重量","自己","仰臥屈膝,臀部發力抬髖,頂端夾臀;避免腰椎過伸與腿後肌代償。"),
+    mk("側臥抬腿",["臀"],"自體重量","自己","側臥,上腳往上外展練臀中肌,骨盆不後倒。"),
+    mk("弓步 (Lunge)",["腿","臀"],"自體重量","自己","前後分腳下蹲,膝蓋對齊腳尖不內扣。可加負重進階。"),
+    mk("負重農夫走",["全身","核心"],"啞鈴","自己","整合功能。雙手提重量行走,軀幹直立、肩胛穩定,抗側屈。"),
   ];
 }
 
@@ -186,9 +268,28 @@ function compressImage(file, cb){
 /* ---------------- 渲染 ---------------- */
 function render(){
   document.querySelectorAll(".tabbar button").forEach(b=>b.classList.toggle("active", b.dataset.tab===TAB));
-  $("#hTitle").textContent = TAB==="menus" ? "📋 訓練菜單" : "📚 動作庫";
-  $("#app").innerHTML = TAB==="menus" ? renderMenus() : renderLibrary();
+  const titles={menus:"📋 訓練菜單", library:"📚 動作庫", framework:"📖 訓練框架"};
+  $("#hTitle").textContent = titles[TAB];
+  $("#app").innerHTML = TAB==="menus" ? renderMenus() : TAB==="framework" ? renderFramework() : renderLibrary();
+  $("#fab").style.display = TAB==="framework" ? "none" : "flex";
   wire();
+}
+
+function renderFramework(){
+  const cards = FRAMEWORK.map(f=>`
+    <details class="card fw">
+      <summary><span class="fw-zone">${esc(f.zone)}</span><span class="fw-main">${esc(f.main)}</span></summary>
+      <div class="fw-body">
+        <div class="fw-line"><span class="fw-k">目標肌肉</span><span>${esc(f.muscle)}</span></div>
+        <div class="fw-line"><span class="fw-k">常見代償</span><span class="warn">${esc(f.comp)}</span></div>
+        <div class="fw-prog">
+          <div class="fw-step"><span class="fw-badge reg">退階</span><span>${esc(f.regress)}</span></div>
+          <div class="fw-step"><span class="fw-badge base">原始</span><span>${esc(f.base)}</span></div>
+          <div class="fw-step"><span class="fw-badge adv">進階</span><span>${esc(f.advance)}</span></div>
+        </div>
+      </div>
+    </details>`).join("");
+  return `<div class="fw-intro">依身體區域的動作框架:每一區從「原始」動作做起,做穩了往「進階」推,卡關就退回「退階」。點各區域展開查看。</div>${cards}`;
 }
 
 function renderMenus(){

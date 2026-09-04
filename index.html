@@ -75,7 +75,29 @@
   .ex-item{display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid var(--line);}
   .ex-item:last-child{border-bottom:none;}
   .ex-name{font-weight:600;}
-  .thumb{width:52px; height:52px; border-radius:10px; object-fit:cover; flex-shrink:0; background:var(--panel2);}
+  .thumb{width:48px; height:48px; border-radius:10px; object-fit:cover; flex-shrink:0; background:var(--panel2);}
+  .thumb-ph{display:flex; align-items:center; justify-content:center; font-size:22px;}
+  /* library groups */
+  details.grp{padding:0; position:relative; margin-bottom:10px;}
+  details.grp summary{list-style:none; cursor:pointer; padding:14px; display:flex; align-items:center; gap:10px;}
+  details.grp summary::-webkit-details-marker{display:none;}
+  details.grp summary::after{content:"▾"; color:var(--muted); transition:transform .2s; margin-left:2px;}
+  details.grp[open] summary::after{transform:rotate(180deg);}
+  .grp-ic{font-size:20px;}
+  .grp-name{font-weight:700; font-size:16px;}
+  .grp-count{background:var(--panel2); color:var(--muted); font-size:12px; font-weight:600; padding:1px 9px; border-radius:999px; margin-left:auto;}
+  .grp-body{border-top:1px solid var(--line); padding:2px 14px 6px;}
+  .ex-row{display:flex; align-items:center; gap:11px; padding:11px 0; border-bottom:1px solid var(--line); cursor:pointer;}
+  .ex-row:last-child{border-bottom:none;}
+  .ex-row:active{opacity:.6;}
+  .ex-meta{color:var(--muted); font-size:12px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .chev{color:var(--muted); font-size:22px; flex-shrink:0;}
+  /* exercise detail view */
+  .v-img{width:100%; max-height:280px; object-fit:cover; border-radius:12px; display:block;}
+  .v-video{display:block; text-align:center; text-decoration:none;}
+  .v-notes{background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--accent);
+    border-radius:10px; padding:12px 14px; margin-top:12px; line-height:1.7; font-size:14px;}
+  .v-notes-h{font-size:12px; color:var(--muted); margin-bottom:6px; letter-spacing:.03em;}
   .imgprev{width:100%; max-height:200px; object-fit:cover; border-radius:12px; margin-top:8px; display:block;}
   .imgrow{display:flex; gap:8px; align-items:center; margin-top:6px;}
   .link{color:var(--accent); text-decoration:none;}
@@ -148,6 +170,9 @@
 <script>
 /* ---------------- 資料層 ---------------- */
 const CATS = ["胸","背","腿","臀","肩","手臂","核心","腳踝穩定","重心轉移","爆發跳躍","有氧","伸展","全身"];
+// 動作庫分組顯示順序(基礎部位在前,功能性分類在後)
+const CAT_ORDER = ["胸","背","腿","臀","肩","核心","手臂","爆發跳躍","腳踝穩定","重心轉移","有氧","伸展","全身"];
+const CAT_ICON = {胸:"🫁",背:"🔙",腿:"🦵",臀:"🍑",肩:"💪",核心:"🎯",手臂:"💪",爆發跳躍:"⚡",腳踝穩定:"🦶",重心轉移:"⚖️",有氧:"🏃",伸展:"🧘",全身:"🕺",其他:"📦"};
 const EQUIP = ["自體重量","啞鈴","槓鈴","機械","滑輪","壺鈴","彈力帶","其他"];
 const SOURCES = ["IG","YouTube","實體課","教練","自己","其他"];
 const KEY = "fitness_data_v2";
@@ -316,45 +341,57 @@ function renderMenus(){
   }).join("");
 }
 
+// 一列動作(可點擊 → 開啟詳情)
+function exRow(e){
+  const thumb = e.imageData ? `<img class="thumb" src="${e.imageData}" alt="">`
+    : `<div class="thumb thumb-ph">${CAT_ICON[e.cats[0]]||"🏋️"}</div>`;
+  const meta = [e.equip, e.sourceUrl?"🎬 影片":(e.source||""), e.notes?"📝":""].filter(Boolean).join(" · ");
+  return `<div class="ex-row" data-viewex="${e.id}">
+    ${thumb}
+    <div style="flex:1; min-width:0">
+      <div class="ex-name">${esc(e.name)}</div>
+      ${meta?`<div class="ex-meta">${esc(meta)}</div>`:""}
+    </div>
+    <span class="chev">›</span>
+  </div>`;
+}
+
 function renderLibrary(){
-  const filterChips = ["全部",...CATS].map(c=>
-    `<button class="fchip ${libFilterCat===c?'on':''}" data-cat="${c}">${c}</button>`).join("");
-  let list = DB.exercises.slice().sort((a,b)=>b.createdAt-a.createdAt);
-  if(libFilterCat!=="全部") list = list.filter(e=>e.cats.includes(libFilterCat));
-  if(libSearch) list = list.filter(e=>e.name.toLowerCase().includes(libSearch.toLowerCase()));
+  const searchBox = `<input id="libSearch" placeholder="🔍 搜尋動作…" value="${esc(libSearch)}" style="margin-bottom:12px">`;
 
-  const items = list.length ? list.map(e=>{
-    const cats = e.cats.map(c=>`<span class="chip">${esc(c)}</span>`).join("");
-    const eq = e.equip?`<span class="chip eq">${esc(e.equip)}</span>`:"";
-    const src = e.sourceUrl
-      ? `<a class="link small" href="${esc(e.sourceUrl)}" target="_blank" rel="noopener">🔗 ${esc(e.source||"來源")}</a>`
-      : (e.source?`<span class="badge">來源:${esc(e.source)}</span>`:"");
-    const thumb = e.imageData ? `<img class="thumb" src="${e.imageData}" alt="">` : "";
-    return `<div class="ex-item">
-      ${thumb}
-      <div style="flex:1; min-width:0">
-        <div class="ex-name">${esc(e.name)}</div>
-        <div class="chips">${cats}${eq}</div>
-        ${e.notes?`<div class="tagline">📝 ${esc(e.notes)}</div>`:""}
-        ${src?`<div style="margin-top:4px">${src}</div>`:""}
-      </div>
-      <button class="btn ghost sm" data-editex="${e.id}">編輯</button>
-    </div>`;
-  }).join("") : `<div class="empty"><div class="big">🔍</div>沒有符合的動作</div>`;
+  // 搜尋模式:跨分類平鋪結果
+  if(libSearch.trim()){
+    const q=libSearch.trim().toLowerCase();
+    const hits=DB.exercises.filter(e=>e.name.toLowerCase().includes(q)||(e.notes||"").toLowerCase().includes(q))
+      .sort((a,b)=>b.createdAt-a.createdAt);
+    const rows = hits.length ? hits.map(exRow).join("")
+      : `<div class="empty"><div class="big">🔍</div>找不到「${esc(libSearch)}」</div>`;
+    return `${searchBox}<div class="hint" style="margin:2px 2px 10px">搜尋結果 ${hits.length} 筆</div><div class="card" style="padding:2px 12px">${rows}</div>`;
+  }
 
-  return `
-    <input id="libSearch" placeholder="🔍 搜尋動作…" value="${esc(libSearch)}" style="margin-bottom:12px">
-    <div class="filters">${filterChips}</div>
-    <div class="card" style="padding:4px 14px">${items}</div>
-    <div class="hint" style="text-align:center; margin-top:14px">共 ${DB.exercises.length} 個動作 · 點右下角 ＋ 快速新增</div>`;
+  // 分組收合模式
+  const byCat={};
+  DB.exercises.forEach(e=>{ const k=(CAT_ORDER.includes(e.cats[0])?e.cats[0]:"其他"); (byCat[k]=byCat[k]||[]).push(e); });
+  const order=[...CAT_ORDER,"其他"];
+  const groups = order.filter(c=>byCat[c]&&byCat[c].length).map(c=>{
+    const rows = byCat[c].sort((a,b)=>b.createdAt-a.createdAt).map(exRow).join("");
+    return `<details class="card grp">
+      <summary><span class="grp-ic">${CAT_ICON[c]||"📦"}</span><span class="grp-name">${esc(c)}</span>
+        <span class="grp-count">${byCat[c].length}</span></summary>
+      <div class="grp-body">${rows}</div>
+    </details>`;
+  }).join("");
+
+  return `${searchBox}
+    <div class="hint" style="margin:2px 2px 12px">共 ${DB.exercises.length} 個動作 · 點分類展開 · 點右下 ＋ 新增</div>
+    ${groups || '<div class="empty"><div class="big">📚</div>還沒有動作,點右下 ＋ 新增</div>'}`;
 }
 
 /* ---------------- 事件綁定 ---------------- */
 function wire(){
-  document.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{ libFilterCat=b.dataset.cat; render(); });
-  const s=$("#libSearch"); if(s){ s.oninput=e=>{ libSearch=e.target.value; const el=$("#app"); const pos=s.selectionStart;
+  const s=$("#libSearch"); if(s){ s.oninput=e=>{ libSearch=e.target.value; const pos=s.selectionStart;
     render(); const ns=$("#libSearch"); if(ns){ns.focus(); ns.setSelectionRange(pos,pos);} }; }
-  document.querySelectorAll("[data-editex]").forEach(b=>b.onclick=()=>openExerciseForm(b.dataset.editex));
+  document.querySelectorAll("[data-viewex]").forEach(b=>b.onclick=()=>openExerciseView(b.dataset.viewex));
   document.querySelectorAll("[data-editmenu]").forEach(b=>b.onclick=()=>openMenuForm(b.dataset.editmenu));
 }
 
@@ -362,6 +399,34 @@ function wire(){
 function openSheet(html){ $("#sheet").innerHTML=html; $("#overlay").classList.add("open"); }
 function closeSheet(){ $("#overlay").classList.remove("open"); }
 $("#overlay").addEventListener("click",e=>{ if(e.target.id==="overlay") closeSheet(); });
+
+/* ---------------- 動作詳情(檢視) ---------------- */
+function openExerciseView(id){
+  const e=exById(id); if(!e) return;
+  const cats=e.cats.map(c=>`<span class="chip">${esc(c)}</span>`).join("");
+  const eq=e.equip?`<span class="chip eq">${esc(e.equip)}</span>`:"";
+  const img=e.imageData?`<img class="v-img" src="${e.imageData}" alt="">`:"";
+  const video=e.sourceUrl
+    ? `<a class="btn primary v-video" href="${esc(e.sourceUrl)}" target="_blank" rel="noopener">🎬 開啟${e.source==="YouTube"?" YouTube":e.source==="IG"?" IG":""}影片 / 來源</a>`
+    : (e.source?`<div class="v-src muted small">來源:${esc(e.source)}</div>`:"");
+  openSheet(`
+    <div class="sheethead"><h3>${esc(e.name)}</h3><div class="spacer"></div>
+      <button class="btn ghost sm" id="cxx">關閉</button></div>
+    <div class="chips" style="margin:2px 0 12px">${cats}${eq}</div>
+    ${img}
+    ${video?`<div style="margin:${img?'12px':'0'} 0 4px">${video}</div>`:""}
+    ${e.notes?`<div class="v-notes"><div class="v-notes-h">📝 動作說明 / 教練提示</div>${esc(e.notes).replace(/\n/g,"<br>")}</div>`:'<div class="muted small" style="margin-top:10px">尚無說明,點下方「編輯」補上重點或影片連結。</div>'}
+    <div class="row" style="margin-top:20px; gap:8px">
+      <button class="btn danger sm" id="vDel">刪除</button>
+      <div class="spacer"></div>
+      <button class="btn" id="vEdit" style="padding:9px 18px">✏️ 編輯</button>
+    </div>
+  `);
+  $("#cxx").onclick=closeSheet;
+  $("#vEdit").onclick=()=>openExerciseForm(id);
+  $("#vDel").onclick=()=>{ if(confirm("確定刪除「"+e.name+"」?")){ DB.exercises=DB.exercises.filter(x=>x.id!==id);
+    DB.menus.forEach(m=>m.items=m.items.filter(it=>it.exId!==id)); save(); closeSheet(); render(); } };
+}
 
 /* ---------------- 動作表單 ---------------- */
 function openExerciseForm(id){

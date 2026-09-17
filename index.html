@@ -50,6 +50,10 @@
     padding:3px 9px; border-radius:999px; font-size:12px; white-space:nowrap;}
   .chip.eq{background:#3b2f1e; color:#fbbf24;}
   .chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;}
+  .tag-chip{display:inline-flex; align-items:center; gap:3px; background:#3b2a1e; color:#fbbf24;
+    padding:3px 9px; border-radius:999px; font-size:12px; white-space:nowrap; border:1px solid #5a4326;}
+  .fchip.tagsel.on{background:#f59e0b; color:#231a08; border-color:#f59e0b;}
+  .pk-flabel{font-size:12px; color:var(--muted); margin:4px 2px 5px; letter-spacing:.03em;}
   .tabbar{
     position:fixed; bottom:0; left:0; right:0; z-index:30; display:flex;
     background:var(--panel); border-top:1px solid var(--line);
@@ -169,13 +173,16 @@
 
 <script>
 /* ---------------- 資料層 ---------------- */
-const CATS = ["胸","背","腿","臀","肩","手臂","核心","腳踝穩定","重心轉移","爆發跳躍","有氧","伸展","全身"];
-// 動作庫分組顯示順序(基礎部位在前,功能性分類在後)
-const CAT_ORDER = ["胸","背","腿","臀","肩","核心","手臂","爆發跳躍","腳踝穩定","重心轉移","有氧","伸展","全身"];
-const CAT_ICON = {胸:"🫁",背:"🔙",腿:"🦵",臀:"🍑",肩:"💪",核心:"🎯",手臂:"💪",爆發跳躍:"⚡",腳踝穩定:"🦶",重心轉移:"⚖️",有氧:"🏃",伸展:"🧘",全身:"🕺",其他:"📦"};
+// 肌群 / 部位(動作庫的主分類,用來分組)
+const CATS = ["胸","背","肩","手臂","腿","臀","核心","全身"];
+const CAT_ORDER = ["胸","背","肩","手臂","腿","臀","核心","全身"];
+const CAT_ICON = {胸:"🫁",背:"🔙",肩:"🦾",手臂:"💪",腿:"🦵",臀:"🍑",核心:"🎯",全身:"🕺",其他:"📦"};
+// 特色標籤(跨肌群的特性,可貼在不同動作上)
+const TAGS = ["爆發跳躍","腳踝穩定","重心轉移","活動度","矯正穩定","進階"];
+const TAG_ICON = {爆發跳躍:"⚡",腳踝穩定:"🦶",重心轉移:"⚖️",活動度:"🧘",矯正穩定:"🩹",進階:"🔥"};
 const EQUIP = ["自體重量","啞鈴","槓鈴","機械","滑輪","壺鈴","彈力帶","其他"];
 const SOURCES = ["IG","YouTube","實體課","教練","自己","其他"];
-const KEY = "fitness_data_v2";
+const KEY = "fitness_data_v3";
 
 // 依身體區域的訓練框架(參考用,唯讀)
 const FRAMEWORK = [
@@ -204,58 +211,57 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
 
 function seedExercises(){
   let t=Date.now();
-  const mk=(name,cats,eq,src,notes)=>({id:uid(),name,cats,equip:eq,source:src||"",sourceUrl:"",imageData:"",notes:notes||"",createdAt:t--});
+  const mk=(name,cats,tags,eq,src,notes)=>({id:uid(),name,cats,tags:tags||[],equip:eq,source:src||"",sourceUrl:"",imageData:"",notes:notes||"",createdAt:t--});
   return [
-    // 腳踝穩定
-    mk("單腳站立",["腳踝穩定"],"自體重量","自己","站立類。單腳站立,訓練本體感覺與平衡。"),
-    mk("米字腳",["腳踝穩定"],"自體重量","自己","站立類。單腳為軸心,腳往八個方向點地(米字)。"),
-    mk("單腳蹲",["腳踝穩定","腿"],"自體重量","自己","站立類。單腳為軸心做深蹲,不行可扶牆。"),
-    mk("彈力帶輔助拉腳踝",["腳踝穩定"],"彈力帶","自己","彈力帶綁在一側,腳踝向反方向拉做對抗,強化腳踝剛性;也可用手拉、使腳踝往下對抗。"),
-    mk("單腳跳(米字八方向)",["腳踝穩定","爆發跳躍"],"自體重量","自己","跳躍/動態類。【進階】單腳往八個方向跳(米字)。"),
-    // 重心轉移(築健)
-    mk("單邊重心轉移",["重心轉移","肩"],"啞鈴","實體課","【築健】開始前雙腳站立注意重心(在腳背前一點點,我習慣往後)。雙手拿球或輕重量,一邊慢慢肩推往上;當有點卡住時,開始把重心往另一邊壓,並持續把肩往上推,肩膀不要有出力不適的感覺。重心不是用腰代償去推,而是用臀外側肌力去推。"),
-    mk("髖部重心左右轉移(交叉腳)",["重心轉移","腿","臀"],"啞鈴","實體課","【築健】雙腳站立注意重心。右手拿啞鈴往外甩,往內時把啞鈴提起停住;右腳往左腳後踩,再用右腳往外踩成右弓箭步、左腳伸直;啞鈴手過頭往左側帶。"),
-    mk("分腿高跪姿",["重心轉移","臀","核心"],"啞鈴","實體課","【築健】雙手拿單顆啞鈴(右腳高跪)。手往『左下—右上』擺動,腿也跟著:往上時往前、往下時往後。往上會感到前髖被伸展,往下覺得大腿痠;手擺動時身體稍微跟著旋轉。"),
-    // 爆發/跳躍
-    mk("落地跳接深跳",["爆發跳躍","腿"],"自體重量","自己","從高處落地緩衝後,立刻接一個深跳(depth jump)。"),
-    mk("單腳跳箱 (single leg hop by box)",["爆發跳躍","腳踝穩定"],"自體重量","自己","單腳跳上/跳過箱子。"),
     // 胸
-    mk("啞鈴臥推",["胸"],"啞鈴","自己"),
-    mk("啞鈴上胸推",["胸"],"啞鈴","自己","上斜,練上胸。"),
-    mk("槓鈴臥推",["胸"],"槓鈴","自己"),
-    mk("槓鈴上胸",["胸"],"槓鈴","自己","上斜槓鈴臥推,練上胸。"),
-    mk("滑輪飛鳥",["胸"],"滑輪","自己"),
-    mk("雙槓撐體",["胸","手臂"],"自體重量","自己","【進階】身體前傾偏胸,直立偏三頭。"),
+    mk("啞鈴臥推",["胸"],[],"啞鈴","自己"),
+    mk("啞鈴上胸推",["胸"],[],"啞鈴","自己","上斜,練上胸。"),
+    mk("槓鈴臥推",["胸"],[],"槓鈴","自己"),
+    mk("槓鈴上胸",["胸"],[],"槓鈴","自己","上斜槓鈴臥推,練上胸。"),
+    mk("滑輪飛鳥",["胸"],[],"滑輪","自己"),
+    mk("雙槓撐體",["胸","手臂"],["進階"],"自體重量","自己","身體前傾偏胸,直立偏三頭。"),
     // 背
-    mk("引體向上",["背"],"自體重量","自己"),
-    mk("滑輪下拉(坐姿)",["背"],"滑輪","自己"),
-    mk("滑輪直槓下拉(站姿)",["背"],"滑輪","自己","站姿,直槓下拉。"),
-    mk("臉拉",["背","肩"],"滑輪","自己","練後三角與上背。"),
-    // 腿
-    mk("相撲槓鈴硬舉",["腿","臀"],"槓鈴","自己","相撲站姿,練大腿內側與臀。"),
-    mk("相撲啞鈴硬舉",["腿","臀"],"啞鈴","實體課","【築健】啞鈴雙手,重心微往前;屁股重點要往後往下,避免用膝蓋帶動。做的時候會有大腿內側緊緊的,腳板也會在靠近內側的地方有感受。"),
-    mk("分腿蹲",["腿","臀"],"自體重量","實體課","【築健】重心稍放前(約腳板中間與小腿交界),後腳往後為墊;屁股往後往下坐,重點往下,身體不要為了平衡而前後壓。左腳多練,會感到後腿與臀交界、大腿內側緊。"),
-    mk("單腳硬舉",["腿","臀","腳踝穩定"],"啞鈴","自己","單腿羅馬尼亞硬舉,兼練平衡與腳踝穩定。"),
-    mk("壺鈴擺盪",["臀","腿","全身"],"壺鈴","自己","爆發力類。髖鉸鏈發力。"),
-    mk("背槓深蹲跳",["腿","爆發跳躍"],"槓鈴","自己","爆發力類。背槓深蹲後爆發跳起(用輕重量)。"),
+    mk("引體向上",["背"],[],"自體重量","自己"),
+    mk("滑輪下拉(坐姿)",["背"],[],"滑輪","自己"),
+    mk("滑輪直槓下拉(站姿)",["背"],[],"滑輪","自己","站姿,直槓下拉。"),
+    mk("臉拉",["背","肩"],[],"滑輪","自己","練後三角與上背。"),
+    mk("鳥狗 (Bird-dog)",["背","核心"],["矯正穩定"],"自體重量","自己","四足跪姿,對側手腳伸直保持軀幹穩定,避免骨盆旋轉。"),
+    mk("開書式(胸椎旋轉)",["背"],["活動度"],"自體重量","自己","側臥,上手畫大圈往後開,轉動來自胸椎、避免腰椎代償。"),
     // 肩
-    mk("滑輪側平舉",["肩"],"滑輪","自己","練中三角。"),
-    mk("後三角(機械)",["肩"],"機械","自己","反向飛鳥,練後三角。"),
-    mk("前鋸肌(肩夾擠)",["肩","核心"],"自體重量","自己","肩胛前引(protraction),練前鋸肌。"),
-    mk("扶牆Y字",["肩"],"自體重量","自己","面牆,手臂沿牆做 Y 字上舉,練下斜方與肩胛穩定。"),
-    // 核心 / 矯正(來自訓練框架表)
-    mk("90/90 呼吸",["核心"],"自體重量","自己","仰臥,髖膝各 90 度。用橫膈膜呼吸、肋骨下沉,啟動腹橫肌與骨盆底;避免用頸部(胸鎖乳突肌/斜角肌)代償。"),
-    mk("死蟲 (Dead Bug)",["核心"],"自體重量","自己","仰臥,對側手腳緩慢伸展,腰椎全程貼地保持中立。退階可單手/單腳。"),
-    mk("鳥狗 (Bird-dog)",["核心","背"],"自體重量","自己","四足跪姿,對側手腳伸直保持軀幹穩定,避免骨盆旋轉。"),
-    mk("棒式 (Plank)",["核心"],"自體重量","自己","肘撐,身體一直線,骨盆後傾避免腰椎過伸。退階可膝跪。"),
-    mk("熊爬 (Bear Crawl)",["核心","全身"],"自體重量","自己","四足懸膝,對側手腳小步移動,核心穩定不搖晃。進階可壺鈴負重。"),
-    mk("貓牛式",["伸展","核心"],"自體重量","自己","四足跪姿,脊椎逐節屈伸,活動胸椎。"),
-    mk("開書式(胸椎旋轉)",["伸展"],"自體重量","自己","側臥,上手畫大圈往後開,轉動來自胸椎、避免腰椎代償。"),
-    mk("Pallof Press",["核心"],"滑輪","自己","側對滑輪/彈力帶,雙手前推抗旋轉,腰椎保持中立。"),
-    mk("臀橋(橋式)",["臀"],"自體重量","自己","仰臥屈膝,臀部發力抬髖,頂端夾臀;避免腰椎過伸與腿後肌代償。"),
-    mk("側臥抬腿",["臀"],"自體重量","自己","側臥,上腳往上外展練臀中肌,骨盆不後倒。"),
-    mk("弓步 (Lunge)",["腿","臀"],"自體重量","自己","前後分腳下蹲,膝蓋對齊腳尖不內扣。可加負重進階。"),
-    mk("負重農夫走",["全身","核心"],"啞鈴","自己","整合功能。雙手提重量行走,軀幹直立、肩胛穩定,抗側屈。"),
+    mk("滑輪側平舉",["肩"],[],"滑輪","自己","練中三角。"),
+    mk("後三角(機械)",["肩"],[],"機械","自己","反向飛鳥,練後三角。"),
+    mk("前鋸肌(肩夾擠)",["肩","核心"],["矯正穩定"],"自體重量","自己","肩胛前引(protraction),練前鋸肌。"),
+    mk("扶牆Y字",["肩"],["矯正穩定"],"自體重量","自己","面牆,手臂沿牆做 Y 字上舉,練下斜方與肩胛穩定。"),
+    mk("單邊重心轉移",["肩","臀"],["重心轉移"],"啞鈴","實體課","【築健】開始前雙腳站立注意重心(在腳背前一點點,我習慣往後)。雙手拿球或輕重量,一邊慢慢肩推往上;當有點卡住時,開始把重心往另一邊壓,並持續把肩往上推,肩膀不要有出力不適的感覺。重心不是用腰代償去推,而是用臀外側肌力去推。"),
+    // 腿
+    mk("相撲槓鈴硬舉",["腿","臀"],[],"槓鈴","自己","相撲站姿,練大腿內側與臀。"),
+    mk("相撲啞鈴硬舉",["腿","臀"],[],"啞鈴","實體課","【築健】啞鈴雙手,重心微往前;屁股重點要往後往下,避免用膝蓋帶動。做的時候會有大腿內側緊緊的,腳板也會在靠近內側的地方有感受。"),
+    mk("分腿蹲",["腿","臀"],[],"自體重量","實體課","【築健】重心稍放前(約腳板中間與小腿交界),後腳往後為墊;屁股往後往下坐,重點往下,身體不要為了平衡而前後壓。左腳多練,會感到後腿與臀交界、大腿內側緊。"),
+    mk("弓步 (Lunge)",["腿","臀"],[],"自體重量","自己","前後分腳下蹲,膝蓋對齊腳尖不內扣。可加負重進階。"),
+    mk("單腳蹲",["腿"],["腳踝穩定"],"自體重量","自己","站立類。單腳為軸心做深蹲,不行可扶牆。"),
+    mk("單腳站立",["腿"],["腳踝穩定"],"自體重量","自己","站立類。單腳站立,訓練本體感覺與平衡。"),
+    mk("米字腳",["腿"],["腳踝穩定"],"自體重量","自己","站立類。單腳為軸心,腳往八個方向點地(米字)。"),
+    mk("彈力帶輔助拉腳踝",["腿"],["腳踝穩定","矯正穩定"],"彈力帶","自己","彈力帶綁在一側,腳踝向反方向拉做對抗,強化腳踝剛性;也可用手拉、使腳踝往下對抗。"),
+    mk("單腳硬舉",["腿","臀"],["腳踝穩定","進階"],"啞鈴","自己","單腿羅馬尼亞硬舉,兼練平衡與腳踝穩定。"),
+    mk("髖部重心左右轉移(交叉腳)",["腿","臀"],["重心轉移"],"啞鈴","實體課","【築健】雙腳站立注意重心。右手拿啞鈴往外甩,往內時把啞鈴提起停住;右腳往左腳後踩,再用右腳往外踩成右弓箭步、左腳伸直;啞鈴手過頭往左側帶。"),
+    mk("背槓深蹲跳",["腿"],["爆發跳躍"],"槓鈴","自己","背槓深蹲後爆發跳起(用輕重量)。"),
+    mk("落地跳接深跳",["腿"],["爆發跳躍"],"自體重量","自己","從高處落地緩衝後,立刻接一個深跳(depth jump)。"),
+    mk("單腳跳(米字八方向)",["腿"],["爆發跳躍","腳踝穩定","進階"],"自體重量","自己","跳躍/動態類。單腳往八個方向跳(米字)。"),
+    mk("單腳跳箱 (single leg hop by box)",["腿"],["爆發跳躍","腳踝穩定"],"自體重量","自己","單腳跳上/跳過箱子。"),
+    // 臀
+    mk("壺鈴擺盪",["臀","腿"],["爆發跳躍"],"壺鈴","自己","髖鉸鏈發力,爆發力類。"),
+    mk("臀橋(橋式)",["臀"],[],"自體重量","自己","仰臥屈膝,臀部發力抬髖,頂端夾臀;避免腰椎過伸與腿後肌代償。"),
+    mk("側臥抬腿",["臀"],[],"自體重量","自己","側臥,上腳往上外展練臀中肌,骨盆不後倒。"),
+    mk("分腿高跪姿",["臀","核心"],["重心轉移"],"啞鈴","實體課","【築健】雙手拿單顆啞鈴(右腳高跪)。手往『左下—右上』擺動,腿也跟著:往上時往前、往下時往後。往上會感到前髖被伸展,往下覺得大腿痠;手擺動時身體稍微跟著旋轉。"),
+    // 核心 / 矯正
+    mk("90/90 呼吸",["核心"],["矯正穩定"],"自體重量","自己","仰臥,髖膝各 90 度。用橫膈膜呼吸、肋骨下沉,啟動腹橫肌與骨盆底;避免用頸部(胸鎖乳突肌/斜角肌)代償。"),
+    mk("死蟲 (Dead Bug)",["核心"],["矯正穩定"],"自體重量","自己","仰臥,對側手腳緩慢伸展,腰椎全程貼地保持中立。退階可單手/單腳。"),
+    mk("棒式 (Plank)",["核心"],[],"自體重量","自己","肘撐,身體一直線,骨盆後傾避免腰椎過伸。退階可膝跪。"),
+    mk("Pallof Press",["核心"],["矯正穩定"],"滑輪","自己","側對滑輪/彈力帶,雙手前推抗旋轉,腰椎保持中立。"),
+    mk("貓牛式",["核心"],["活動度"],"自體重量","自己","四足跪姿,脊椎逐節屈伸,活動胸椎。"),
+    // 全身
+    mk("熊爬 (Bear Crawl)",["全身","核心"],[],"自體重量","自己","四足懸膝,對側手腳小步移動,核心穩定不搖晃。進階可壺鈴負重。"),
+    mk("負重農夫走",["全身","核心"],[],"啞鈴","自己","整合功能。雙手提重量行走,軀幹直立、肩胛穩定,抗側屈。"),
   ];
 }
 
@@ -345,11 +351,13 @@ function renderMenus(){
 function exRow(e){
   const thumb = e.imageData ? `<img class="thumb" src="${e.imageData}" alt="">`
     : `<div class="thumb thumb-ph">${CAT_ICON[e.cats[0]]||"🏋️"}</div>`;
+  const tags = (e.tags||[]).map(t=>`<span class="tag-chip">${TAG_ICON[t]||""}${esc(t)}</span>`).join("");
   const meta = [e.equip, e.sourceUrl?"🎬 影片":(e.source||""), e.notes?"📝":""].filter(Boolean).join(" · ");
   return `<div class="ex-row" data-viewex="${e.id}">
     ${thumb}
     <div style="flex:1; min-width:0">
       <div class="ex-name">${esc(e.name)}</div>
+      ${tags?`<div class="chips" style="margin-top:3px">${tags}</div>`:""}
       ${meta?`<div class="ex-meta">${esc(meta)}</div>`:""}
     </div>
     <span class="chev">›</span>
@@ -403,7 +411,8 @@ $("#overlay").addEventListener("click",e=>{ if(e.target.id==="overlay") closeShe
 /* ---------------- 動作詳情(檢視) ---------------- */
 function openExerciseView(id){
   const e=exById(id); if(!e) return;
-  const cats=e.cats.map(c=>`<span class="chip">${esc(c)}</span>`).join("");
+  const cats=e.cats.map(c=>`<span class="chip">${CAT_ICON[c]||""} ${esc(c)}</span>`).join("");
+  const tags=(e.tags||[]).map(t=>`<span class="tag-chip">${TAG_ICON[t]||""}${esc(t)}</span>`).join("");
   const eq=e.equip?`<span class="chip eq">${esc(e.equip)}</span>`:"";
   const img=e.imageData?`<img class="v-img" src="${e.imageData}" alt="">`:"";
   const video=e.sourceUrl
@@ -412,7 +421,7 @@ function openExerciseView(id){
   openSheet(`
     <div class="sheethead"><h3>${esc(e.name)}</h3><div class="spacer"></div>
       <button class="btn ghost sm" id="cxx">關閉</button></div>
-    <div class="chips" style="margin:2px 0 12px">${cats}${eq}</div>
+    <div class="chips" style="margin:2px 0 12px">${cats}${eq}${tags}</div>
     ${img}
     ${video?`<div style="margin:${img?'12px':'0'} 0 4px">${video}</div>`:""}
     ${e.notes?`<div class="v-notes"><div class="v-notes-h">📝 動作說明 / 教練提示</div>${esc(e.notes).replace(/\n/g,"<br>")}</div>`:'<div class="muted small" style="margin-top:10px">尚無說明,點下方「編輯」補上重點或影片連結。</div>'}
@@ -430,8 +439,10 @@ function openExerciseView(id){
 
 /* ---------------- 動作表單 ---------------- */
 function openExerciseForm(id){
-  const e = id? exById(id) : {name:"",cats:[],equip:"",source:"",sourceUrl:"",notes:""};
-  const catBtns = CATS.map(c=>`<button type="button" class="fchip ${e.cats.includes(c)?'on':''}" data-tc="${c}">${c}</button>`).join("");
+  const e = id? exById(id) : {name:"",cats:[],tags:[],equip:"",source:"",sourceUrl:"",notes:""};
+  const eTags = e.tags||[];
+  const catBtns = CATS.map(c=>`<button type="button" class="fchip ${e.cats.includes(c)?'on':''}" data-tc="${c}">${CAT_ICON[c]||""} ${c}</button>`).join("");
+  const tagBtns = TAGS.map(t=>`<button type="button" class="fchip tagsel ${eTags.includes(t)?'on':''}" data-tg="${t}">${TAG_ICON[t]||""} ${t}</button>`).join("");
   const eqOpts = ['<option value="">器材(選填)</option>',...EQUIP.map(x=>`<option ${e.equip===x?'selected':''}>${x}</option>`)].join("");
   const srcOpts = ['<option value="">來源(選填)</option>',...SOURCES.map(x=>`<option ${e.source===x?'selected':''}>${x}</option>`)].join("");
   openSheet(`
@@ -439,8 +450,10 @@ function openExerciseForm(id){
       <button class="btn ghost sm" id="cxx">取消</button></div>
     <label>動作名稱 *</label>
     <input id="fName" value="${esc(e.name)}" placeholder="例:保加利亞分腿蹲" autofocus>
-    <label>部位分類 <span class="muted">(可多選,先選一個也行)</span></label>
+    <label>部位分類(肌群)<span class="muted">(可多選,先選一個也行)</span></label>
     <div class="filters" id="catPick" style="flex-wrap:wrap; overflow:visible">${catBtns}</div>
+    <label>特色標籤 <span class="muted">(選填,可多選)</span></label>
+    <div class="filters" id="tagPick" style="flex-wrap:wrap; overflow:visible">${tagBtns}</div>
     <div class="row" style="gap:8px">
       <div style="flex:1"><label>器材</label><select id="fEquip">${eqOpts}</select></div>
       <div style="flex:1"><label>來源</label><select id="fSource">${srcOpts}</select></div>
@@ -463,9 +476,14 @@ function openExerciseForm(id){
     </div>
   `);
   let sel = [...e.cats];
+  let selTags = [...eTags];
   let img = e.imageData || "";
   document.querySelectorAll("#catPick [data-tc]").forEach(b=>b.onclick=()=>{
     const c=b.dataset.tc; if(sel.includes(c)) sel=sel.filter(x=>x!==c); else sel.push(c);
+    b.classList.toggle("on");
+  });
+  document.querySelectorAll("#tagPick [data-tg]").forEach(b=>b.onclick=()=>{
+    const t=b.dataset.tg; if(selTags.includes(t)) selTags=selTags.filter(x=>x!==t); else selTags.push(t);
     b.classList.toggle("on");
   });
   $("#pickImg").onclick=()=>$("#fImgFile").click();
@@ -482,7 +500,7 @@ function openExerciseForm(id){
   $("#saveEx").onclick=()=>{
     const name=$("#fName").value.trim();
     if(!name){ alert("請輸入動作名稱"); return; }
-    const data={ name, cats:sel, equip:$("#fEquip").value, source:$("#fSource").value,
+    const data={ name, cats:sel, tags:selTags, equip:$("#fEquip").value, source:$("#fSource").value,
       sourceUrl:$("#fUrl").value.trim(), notes:$("#fNotes").value.trim(), imageData:img };
     if(id){ Object.assign(exById(id), data); }
     else { DB.exercises.push({id:uid(), createdAt:Date.now(), ...data}); }
@@ -541,35 +559,55 @@ function openMenuForm(id){
 /* ---------------- 動作選擇器 ---------------- */
 function openPicker(already, cb){
   let picked = new Set();
-  let q="";
+  let q="", fCat="", fTag="";
   function draw(){
     let list=DB.exercises.slice().sort((a,b)=>b.createdAt-a.createdAt);
-    if(q) list=list.filter(e=>e.name.toLowerCase().includes(q.toLowerCase()));
+    if(fCat) list=list.filter(e=>e.cats.includes(fCat));
+    if(fTag) list=list.filter(e=>(e.tags||[]).includes(fTag));
+    if(q) list=list.filter(e=>e.name.toLowerCase().includes(q.toLowerCase())||(e.notes||"").toLowerCase().includes(q.toLowerCase()));
+
+    // 只顯示實際有動作的肌群 / 標籤
+    const usedCats=CATS.filter(c=>DB.exercises.some(e=>e.cats.includes(c)));
+    const usedTags=TAGS.filter(t=>DB.exercises.some(e=>(e.tags||[]).includes(t)));
+    const catChips=[`<button class="fchip ${!fCat?'on':''}" data-fc="">全部部位</button>`,
+      ...usedCats.map(c=>`<button class="fchip ${fCat===c?'on':''}" data-fc="${c}">${CAT_ICON[c]||""} ${c}</button>`)].join("");
+    const tagChips=[`<button class="fchip ${!fTag?'on':''}" data-ft="">全部標籤</button>`,
+      ...usedTags.map(t=>`<button class="fchip tagsel ${fTag===t?'on':''}" data-ft="${t}">${TAG_ICON[t]||""} ${t}</button>`)].join("");
+
     const rows=list.map(e=>{
       const inMenu=already.includes(e.id);
+      const tags=(e.tags||[]).map(t=>`<span class="tag-chip">${TAG_ICON[t]||""}${esc(t)}</span>`).join("");
       return `<label class="pick">
         <input type="checkbox" data-p="${e.id}" ${picked.has(e.id)?'checked':''} ${inMenu?'disabled':''}>
-        <div style="flex:1"><div class="ex-name">${esc(e.name)} ${inMenu?'<span class="badge">已在菜單</span>':''}</div>
-          <div class="chips">${e.cats.map(c=>`<span class="chip">${esc(c)}</span>`).join("")}</div></div>
+        <div style="flex:1; min-width:0"><div class="ex-name">${esc(e.name)} ${inMenu?'<span class="badge">已在菜單</span>':''}</div>
+          <div class="chips">${e.cats.map(c=>`<span class="chip">${esc(c)}</span>`).join("")}${tags}</div></div>
       </label>`;
-    }).join("") || '<div class="empty small">找不到動作,先去動作庫新增</div>';
+    }).join("") || '<div class="empty small">沒有符合的動作,換個篩選或先去動作庫新增</div>';
+
     openSheet(`
       <div class="sheethead"><h3>選擇動作</h3><div class="spacer"></div>
         <button class="btn ghost sm" id="pclose">關閉</button></div>
-      <input id="pq" placeholder="🔍 搜尋…" value="${esc(q)}" style="margin-bottom:10px">
+      <input id="pq" placeholder="🔍 搜尋動作名稱 / 筆記…" value="${esc(q)}" style="margin-bottom:10px">
+      <div class="pk-flabel">部位</div>
+      <div class="filters">${catChips}</div>
+      <div class="pk-flabel">特色標籤</div>
+      <div class="filters">${tagChips}</div>
+      <div class="hint" style="margin:2px 2px 8px">符合 ${list.length} 個動作</div>
       <div>${rows}</div>
-      <button class="btn primary" id="pdone" style="width:100%; margin-top:14px; padding:12px">加入所選 (${picked.size})</button>
+      <button class="btn primary" id="pdone" style="position:sticky; bottom:0; width:100%; margin-top:14px; padding:13px">加入所選 (${picked.size})</button>
     `);
-    $("#pq").oninput=e=>{ q=e.target.value; draw(); };
+    const pq=$("#pq");
+    pq.oninput=e=>{ q=e.target.value; const pos=pq.selectionStart; draw();
+      const np=$("#pq"); if(np){ np.focus(); np.setSelectionRange(pos,pos); } };
+    document.querySelectorAll("[data-fc]").forEach(b=>b.onclick=()=>{ fCat=b.dataset.fc; draw(); });
+    document.querySelectorAll("[data-ft]").forEach(b=>b.onclick=()=>{ fTag=b.dataset.ft; draw(); });
     document.querySelectorAll("[data-p]").forEach(cb2=>cb2.onchange=()=>{
       if(cb2.checked) picked.add(cb2.dataset.p); else picked.delete(cb2.dataset.p);
       $("#pdone").textContent=`加入所選 (${picked.size})`;
     });
-    $("#pclose").onclick=()=>openMenuBack();
+    $("#pclose").onclick=()=>cb([]);
     $("#pdone").onclick=()=>{ cb([...picked]); };
   }
-  // 回到菜單表單(取消加入)
-  function openMenuBack(){ cb([]); }
   draw();
 }
 

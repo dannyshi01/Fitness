@@ -26,7 +26,7 @@
   body{
     font-family:var(--font);
     background:var(--bg); color:var(--text); font-size:15px; line-height:1.55;
-    padding-bottom:78px; -webkit-font-smoothing:antialiased;
+    padding-bottom:calc(92px + env(safe-area-inset-bottom)); -webkit-font-smoothing:antialiased;
   }
   header{
     position:sticky; top:0; z-index:20; background:var(--bg);
@@ -67,11 +67,21 @@
   .tabbar{
     position:fixed; bottom:0; left:0; right:0; z-index:30; display:flex;
     background:var(--bg); border-top:1.5px solid var(--rule);
+    padding-bottom:env(safe-area-inset-bottom);
   }
-  .tabbar button{flex:1; background:transparent; color:var(--muted); padding:10px 0 max(10px,env(safe-area-inset-bottom));
-    font-size:11px; display:flex; flex-direction:column; align-items:center; gap:3px; border-radius:0; font-weight:600;}
-  .tabbar button.active{color:var(--ink);}
-  .tabbar .ic{font-size:19px; line-height:1;}
+  .tabbar button{flex:1; min-height:60px; background:transparent; color:var(--muted);
+    font-family:var(--display); font-size:16px; font-weight:700; letter-spacing:.04em;
+    display:flex; align-items:center; justify-content:center; border-radius:0; touch-action:manipulation;}
+  .tabbar button.active{color:var(--ink); box-shadow:inset 0 3px 0 var(--ink);}
+  /* login / banner */
+  .login{position:fixed; inset:0; z-index:60; background:var(--bg); display:none; align-items:center; justify-content:center; padding:24px;}
+  .login.open{display:flex;}
+  .login-box{width:100%; max-width:340px;}
+  .login-box h2{font-family:var(--display); font-size:26px; font-weight:900; margin:0 0 6px; letter-spacing:-.02em;}
+  .login-box p{color:var(--muted); font-size:13px; margin:0 0 18px;}
+  .login-err{color:var(--accent); font-size:13px; min-height:18px; margin-top:10px;}
+  .banner{background:var(--ink); color:var(--bg); font-size:12px; font-weight:600; padding:6px 16px; text-align:center; letter-spacing:.03em;}
+  .banner[hidden]{display:none;}
   .empty{text-align:center; color:var(--muted); padding:44px 20px;}
   .empty .big{font-size:38px; margin-bottom:10px; filter:grayscale(1); opacity:.55;}
   /* modal */
@@ -120,7 +130,7 @@
   .setrow .nm{text-align:left; font-weight:600;}
   .pick{display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--hair);}
   .pick input[type=checkbox]{width:20px; height:20px; accent-color:var(--accent);}
-  .fab{position:fixed; right:16px; bottom:calc(74px + env(safe-area-inset-bottom)); z-index:25;
+  .fab{position:fixed; right:16px; bottom:calc(84px + env(safe-area-inset-bottom)); z-index:25;
     width:54px; height:54px; border-radius:50%; background:var(--ink); color:var(--bg); font-size:26px;
     box-shadow:0 4px 16px rgba(0,0,0,.25); display:flex; align-items:center; justify-content:center; font-weight:300;}
   .tagline{color:var(--muted); font-size:13px; margin-top:3px;}
@@ -160,16 +170,18 @@
   <div class="hbtns">
     <button class="btn ghost sm" id="btnExport">匯出</button>
     <button class="btn ghost sm" id="btnImport">匯入</button>
+    <button class="btn ghost sm" id="btnLogout">登出</button>
   </div>
 </header>
+<div class="banner" id="banner" hidden></div>
 
 <main id="app"></main>
 
 <button class="fab" id="fab">＋</button>
 
 <nav class="tabbar">
-  <button data-tab="menus" class="active">菜單</button>
-  <button data-tab="library">動作庫</button>
+  <button data-tab="library" class="active">動作庫</button>
+  <button data-tab="menus">菜單</button>
   <button data-tab="framework">框架</button>
 </nav>
 
@@ -178,8 +190,23 @@
   <div class="sheet" id="sheet"></div>
 </div>
 
+<!-- 登入 -->
+<div class="login" id="login">
+  <form class="login-box" id="loginForm">
+    <h2>健身菜單庫</h2>
+    <p>登入後才能看到你的動作與菜單。</p>
+    <label>Email</label>
+    <input id="lgEmail" type="email" autocomplete="username" required>
+    <label>密碼</label>
+    <input id="lgPass" type="password" autocomplete="current-password" required>
+    <div class="login-err" id="lgErr"></div>
+    <button class="btn primary" id="lgBtn" type="submit" style="width:100%; margin-top:14px; padding:13px">登入</button>
+  </form>
+</div>
+
 <input type="file" id="fileInput" accept="application/json" style="display:none">
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"></script>
 <script>
 /* ---------------- 資料層 ---------------- */
 // 肌群 / 部位(動作庫的主分類,用來分組)
@@ -191,8 +218,6 @@ const TAGS = ["爆發跳躍","腳踝穩定","重心轉移","活動度","矯正�
 const TAG_ICON = {爆發跳躍:"⚡",腳踝穩定:"🦶",重心轉移:"⚖️",活動度:"🧘",矯正穩定:"🩹",進階:"🔥"};
 const EQUIP = ["自體重量","啞鈴","槓鈴","機械","滑輪","壺鈴","彈力帶","其他"];
 const SOURCES = ["IG","YouTube","實體課","教練","自己","其他"];
-const KEY = "fitness_data_v3";
-
 // 依身體區域的訓練框架(參考用,唯讀)
 const FRAMEWORK = [
   {zone:"呼吸 / 核心", main:"仰臥 90/90 呼吸、死蟲、棒式、熊爬、鳥狗", muscle:"橫膈膜、腹橫肌、骨盆底、多裂肌", comp:"胸鎖乳突肌、斜角肌、上斜方肌", regress:"仰躺支撐、膝跪棒式", base:"死蟲、棒式", advance:"動態手腳移動、壺鈴熊爬"},
@@ -207,16 +232,145 @@ const FRAMEWORK = [
   {zone:"整合功能", main:"半蹲 → 站立、步態、搬運", muscle:"全身協調、核心控制", comp:"腰椎代償、肩頸過緊", regress:"低負荷轉換、慢走", base:"標準步態、半蹲起立", advance:"負重農夫走、跨步推拉"},
 ];
 
-let DB = load();
-function load(){
-  try{
-    const raw = localStorage.getItem(KEY);
-    if(raw) return JSON.parse(raw);
-  }catch(e){}
-  return { exercises: seedExercises(), menus: [] };
+/* ---------------- Supabase 雲端資料層 ---------------- */
+// URL 與 publishable key 是給瀏覽器用的公開值;資料安全由資料庫的 RLS 權限規則 + 登入把關
+const SUPA_URL = "https://zerymfrjnowwjdaqectk.supabase.co";
+const SUPA_KEY = "sb_publishable_kqiAz5Cp_Wk3ZA3VFFttCA_VKQLc1XR";
+const BUCKET = "exercise-images";
+const CACHE_KEY = "fitness_cache_v1";                                   // 離線時顯示用的上次資料
+const LEGACY_KEYS = ["fitness_data_v3","fitness_data_v2","fitness_data_v1"]; // 舊版存在瀏覽器的資料,首次登入時搬上雲
+let sb = null;
+let USER = null;
+let DB = { exercises: [], menus: [] };
+
+// 一定要用 uuid:Postgres 的 id 欄位是 uuid 型別
+function uid(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  const b=crypto.getRandomValues(new Uint8Array(16)); b[6]=(b[6]&15)|64; b[8]=(b[8]&63)|128;
+  const h=[...b].map(x=>x.toString(16).padStart(2,"0")).join("");
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
 }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){ alert("儲存失敗:瀏覽器空間可能已滿"); } }
-function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+const errMsg = err => (err && err.message) ? err.message : String(err);
+
+const rowToEx = r => ({ id:r.id, name:r.name, cats:r.cats||[], tags:r.tags||[], equip:r.equip||"", source:r.source||"",
+  sourceUrl:r.source_url||"", videoUrl:r.video_url||"", imagePath:r.image_path||"", imageData:"", notes:r.notes||"",
+  createdAt:Date.parse(r.created_at)||Date.now() });
+const exToRow = e => ({ id:e.id, name:e.name, cats:e.cats||[], tags:e.tags||[], equip:e.equip||"", source:e.source||"",
+  source_url:e.sourceUrl||"", video_url:e.videoUrl||"", image_path:e.imagePath||"", notes:e.notes||"",
+  created_at:new Date(e.createdAt||Date.now()).toISOString(), updated_at:new Date().toISOString() });
+
+function writeCache(){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify({uid:USER.id, db:DB})); }catch(e){} }
+function readCache(){ try{ const c=JSON.parse(localStorage.getItem(CACHE_KEY)||"null"); if(c&&USER&&c.uid===USER.id) return c.db; }catch(e){} return null; }
+
+// 私有 bucket 的圖片要用「有時效的簽名網址」顯示
+async function attachImageUrls(list){
+  const withImg=list.filter(e=>e.imagePath);
+  if(!withImg.length) return;
+  const {data,error}=await sb.storage.from(BUCKET).createSignedUrls(withImg.map(e=>e.imagePath),3600);
+  if(error||!data) return;
+  data.forEach(d=>{ const e=withImg.find(x=>x.imagePath===d.path); if(e&&d.signedUrl) e.imageData=d.signedUrl; });
+}
+
+async function loadAll(){
+  const [ex,me,mi]=await Promise.all([
+    sb.from("exercises").select("*").order("created_at",{ascending:false}),
+    sb.from("menus").select("*").order("created_at",{ascending:true}),
+    sb.from("menu_items").select("*").order("position",{ascending:true}),
+  ]);
+  for(const r of [ex,me,mi]) if(r.error) throw r.error;
+  const exercises=ex.data.map(rowToEx);
+  const menus=me.data.map(r=>({ id:r.id, name:r.name, notes:r.notes||"", createdAt:Date.parse(r.created_at)||Date.now(), items:[] }));
+  const byId=Object.fromEntries(menus.map(m=>[m.id,m]));
+  mi.data.forEach(r=>{ const m=byId[r.menu_id]; if(m) m.items.push({ id:r.id, exId:r.exercise_id, sets:r.sets||"", reps:r.reps||"" }); });
+  await attachImageUrls(exercises);
+  return { exercises, menus };
+}
+
+async function uploadImage(exId, dataUrl){
+  const blob=await (await fetch(dataUrl)).blob();
+  const path=`${USER.id}/${exId}-${Date.now()}.jpg`;
+  const up=await sb.storage.from(BUCKET).upload(path, blob, { contentType: blob.type||"image/jpeg", upsert:true });
+  if(up.error) throw up.error;
+  return path;
+}
+
+// img:表單裡目前的圖片。"data:..." = 新選的;空字串 = 移除;其他(簽名網址)= 沒改
+async function persistExercise(ex, img){
+  const store=sb.storage.from(BUCKET);
+  if(img && img.startsWith("data:")){
+    const old=ex.imagePath;
+    ex.imagePath=await uploadImage(ex.id, img);
+    const s=await store.createSignedUrl(ex.imagePath,3600);
+    ex.imageData=(s.data&&s.data.signedUrl)||img;
+    if(old) await store.remove([old]);
+  }else if(!img && ex.imagePath){
+    await store.remove([ex.imagePath]); ex.imagePath=""; ex.imageData="";
+  }
+  const {error}=await sb.from("exercises").upsert(exToRow(ex));
+  if(error) throw error;
+}
+async function removeExercise(ex){
+  const {error}=await sb.from("exercises").delete().eq("id",ex.id);   // menu_items 會連帶刪除
+  if(error) throw error;
+  if(ex.imagePath) await sb.storage.from(BUCKET).remove([ex.imagePath]);
+}
+async function persistMenu(m){
+  const a=await sb.from("menus").upsert({ id:m.id, name:m.name, notes:m.notes||"",
+    created_at:new Date(m.createdAt||Date.now()).toISOString(), updated_at:new Date().toISOString() });
+  if(a.error) throw a.error;
+  const rows=m.items.map((it,i)=>({ id:it.id, menu_id:m.id, exercise_id:it.exId, sets:it.sets||"", reps:it.reps||"", position:i }));
+  if(rows.length){ const b=await sb.from("menu_items").upsert(rows); if(b.error) throw b.error; }
+  let del=sb.from("menu_items").delete().eq("menu_id",m.id);            // 刪掉已被移除的項目
+  if(rows.length) del=del.not("id","in",`(${rows.map(r=>r.id).join(",")})`);
+  const c=await del; if(c.error) throw c.error;
+}
+async function removeMenu(id){
+  const {error}=await sb.from("menus").delete().eq("id",id);
+  if(error) throw error;
+}
+
+// 舊版 / 匯入檔 → 新結構(肌群 vs 標籤拆開)
+function normalizeLegacy(d){
+  const exercises=(d.exercises||[]).map(e=>{
+    const cats=[], tags=[...(e.tags||[])];
+    (e.cats||[]).forEach(c=>{ if(CATS.includes(c)) cats.push(c); else if(TAGS.includes(c)) tags.push(c); else if(c==="伸展") tags.push("活動度"); });
+    return { ...e, cats: cats.length?[...new Set(cats)]:["全身"], tags:[...new Set(tags)] };
+  });
+  return { exercises, menus: d.menus||[] };
+}
+
+// 把一包 {exercises, menus} 寫進雲端。一律配發新 uuid,舊 id 只用來對應菜單裡的動作
+async function bulkInsert(payload){
+  const exMap={}, rows=[];
+  for(const e of payload.exercises){
+    const ex={ id:uid(), name:e.name, cats:e.cats||[], tags:e.tags||[], equip:e.equip||"", source:e.source||"",
+      sourceUrl:e.sourceUrl||"", videoUrl:e.videoUrl||"", imagePath:"", notes:e.notes||"", createdAt:e.createdAt||Date.now() };
+    exMap[e.id]=ex.id;
+    if(e.imageData && e.imageData.startsWith("data:")) ex.imagePath=await uploadImage(ex.id, e.imageData);
+    rows.push(exToRow(ex));
+  }
+  if(rows.length){ const r=await sb.from("exercises").insert(rows); if(r.error) throw r.error; }
+  const menuRows=[], itemRows=[];
+  (payload.menus||[]).forEach(m=>{
+    const id=uid();
+    menuRows.push({ id, name:m.name, notes:m.notes||"", created_at:new Date(m.createdAt||Date.now()).toISOString() });
+    (m.items||[]).forEach((it,i)=>{ const exId=exMap[it.exId];
+      if(exId) itemRows.push({ id:uid(), menu_id:id, exercise_id:exId, sets:it.sets||"", reps:it.reps||"", position:i }); });
+  });
+  if(menuRows.length){ const r=await sb.from("menus").insert(menuRows); if(r.error) throw r.error; }
+  if(itemRows.length){ const r=await sb.from("menu_items").insert(itemRows); if(r.error) throw r.error; }
+}
+
+// 第一次登入且雲端是空的:優先把這個瀏覽器裡舊版的資料搬上去;沒有就放預設動作庫
+async function firstTimeSetup(){
+  let payload=null;
+  for(const k of LEGACY_KEYS){
+    try{ const d=JSON.parse(localStorage.getItem(k)||"null");
+      if(d && Array.isArray(d.exercises) && d.exercises.length){ payload=normalizeLegacy(d); break; } }catch(e){}
+  }
+  if(!payload) payload={ exercises:seedExercises(), menus:[] };
+  await bulkInsert(payload);
+}
 
 function seedExercises(){
   let t=Date.now();
@@ -275,7 +429,7 @@ function seedExercises(){
 }
 
 /* ---------------- 狀態 ---------------- */
-let TAB = "menus";
+let TAB = "library";
 let libFilterCat = "全部";
 let libSearch = "";
 
@@ -441,8 +595,18 @@ function openExerciseView(id){
   `);
   $("#cxx").onclick=closeSheet;
   $("#vEdit").onclick=()=>openExerciseForm(id);
-  $("#vDel").onclick=()=>{ if(confirm("確定刪除「"+e.name+"」?")){ DB.exercises=DB.exercises.filter(x=>x.id!==id);
-    DB.menus.forEach(m=>m.items=m.items.filter(it=>it.exId!==id)); save(); closeSheet(); render(); } };
+  $("#vDel").onclick=()=>deleteExercise(id);
+}
+
+async function deleteExercise(id){
+  const e=exById(id); if(!e) return;
+  if(!confirm("確定刪除「"+e.name+"」?")) return;
+  try{
+    await removeExercise(e);
+    DB.exercises=DB.exercises.filter(x=>x.id!==id);
+    DB.menus.forEach(m=>m.items=m.items.filter(it=>it.exId!==id));
+    writeCache(); closeSheet(); render();
+  }catch(err){ alert("刪除失敗:"+errMsg(err)); }
 }
 
 /* ---------------- 動作表單 ---------------- */
@@ -503,23 +667,30 @@ function openExerciseForm(id){
     ev.target.value="";
   };
   $("#cxx").onclick=closeSheet;
-  if(id) $("#delEx").onclick=()=>{ if(confirm("確定刪除這個動作?")){ DB.exercises=DB.exercises.filter(x=>x.id!==id);
-    DB.menus.forEach(m=>m.items=m.items.filter(it=>it.exId!==id)); save(); closeSheet(); render(); } };
-  $("#saveEx").onclick=()=>{
+  if(id) $("#delEx").onclick=()=>deleteExercise(id);
+  $("#saveEx").onclick=async ()=>{
     const name=$("#fName").value.trim();
     if(!name){ alert("請輸入動作名稱"); return; }
-    const data={ name, cats:sel, tags:selTags, equip:$("#fEquip").value, source:$("#fSource").value,
-      sourceUrl:$("#fUrl").value.trim(), notes:$("#fNotes").value.trim(), imageData:img };
-    if(id){ Object.assign(exById(id), data); }
-    else { DB.exercises.push({id:uid(), createdAt:Date.now(), ...data}); }
-    save(); closeSheet(); render();
+    const btn=$("#saveEx"); btn.disabled=true; btn.textContent="儲存中…";
+    const base = id ? {...exById(id)} : { id:uid(), createdAt:Date.now(), imagePath:"", imageData:"", videoUrl:"" };
+    const ex = { ...base, name, cats:sel, tags:selTags, equip:$("#fEquip").value, source:$("#fSource").value,
+      sourceUrl:$("#fUrl").value.trim(), notes:$("#fNotes").value.trim() };
+    try{
+      await persistExercise(ex, img);
+      if(id) Object.assign(exById(id), ex); else DB.exercises.push(ex);
+      writeCache(); closeSheet(); render();
+    }catch(err){
+      alert("儲存失敗:"+errMsg(err));
+      btn.disabled=false; btn.textContent="儲存";
+    }
   };
 }
 
 /* ---------------- 菜單表單 ---------------- */
 function openMenuForm(id){
-  const m = id? DB.menus.find(x=>x.id===id) : {name:"",notes:"",items:[]};
-  let items = JSON.parse(JSON.stringify(m.items));
+  const orig = id ? DB.menus.find(x=>x.id===id) : null;
+  const m = orig ? {...orig} : {name:"",notes:"",items:[]};   // 複製一份編輯,取消就不會動到原資料
+  let items = JSON.parse(JSON.stringify(m.items)).map(it=>({ ...it, id: it.id || uid() }));
   function draw(){
     const rows = items.map((it,i)=>{
       const ex=exById(it.exId); if(!ex) return "";
@@ -551,14 +722,25 @@ function openMenuForm(id){
     document.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{ sync(); items.splice(+b.dataset.rm,1); draw(); });
     $("#cxx").onclick=closeSheet;
     $("#addItem").onclick=()=>{ sync(); openPicker(items.map(x=>x.exId), chosen=>{
-      chosen.forEach(exId=>{ if(!items.find(x=>x.exId===exId)) items.push({exId,sets:"",reps:""}); }); draw(); }); };
-    if(id) $("#delMenu").onclick=()=>{ if(confirm("確定刪除這個菜單?")){ DB.menus=DB.menus.filter(x=>x.id!==id); save(); closeSheet(); render(); } };
-    $("#saveMenu").onclick=()=>{
+      chosen.forEach(exId=>{ if(!items.find(x=>x.exId===exId)) items.push({id:uid(),exId,sets:"",reps:""}); }); draw(); }); };
+    if(id) $("#delMenu").onclick=async ()=>{
+      if(!confirm("確定刪除這個菜單?")) return;
+      try{ await removeMenu(id); DB.menus=DB.menus.filter(x=>x.id!==id); writeCache(); closeSheet(); render(); }
+      catch(err){ alert("刪除失敗:"+errMsg(err)); }
+    };
+    $("#saveMenu").onclick=async ()=>{
       const name=$("#mName").value.trim(); if(!name){ alert("請輸入菜單名稱"); return; }
       const notes=$("#mNotes").value.trim();
-      if(id){ m.name=name; m.notes=notes; m.items=items; }
-      else { DB.menus.push({id:uid(), name, notes, items, createdAt:Date.now()}); }
-      save(); closeSheet(); render();
+      const btn=$("#saveMenu"); btn.disabled=true; btn.textContent="儲存中…";
+      const menu = orig ? { ...orig, name, notes, items } : { id:uid(), name, notes, items, createdAt:Date.now() };
+      try{
+        await persistMenu(menu);
+        if(orig) Object.assign(orig, menu); else DB.menus.push(menu);
+        writeCache(); closeSheet(); render();
+      }catch(err){
+        alert("儲存失敗:"+errMsg(err));
+        btn.disabled=false; btn.textContent="儲存菜單";
+      }
     };
   }
   draw();
@@ -626,24 +808,98 @@ $("#fab").onclick=()=>{ if(TAB==="menus") openMenuForm(null); else openExerciseF
 document.querySelectorAll(".tabbar button").forEach(b=>b.onclick=()=>{ TAB=b.dataset.tab; render(); });
 
 /* ---------------- 匯出 / 匯入 ---------------- */
-$("#btnExport").onclick=()=>{
-  const blob=new Blob([JSON.stringify(DB,null,2)],{type:"application/json"});
-  const url=URL.createObjectURL(blob); const a=document.createElement("a");
-  a.href=url; a.download="fitness-backup-"+new Date().toISOString().slice(0,10)+".json"; a.click();
-  URL.revokeObjectURL(url);
+async function urlToDataUrl(url){
+  const blob=await (await fetch(url)).blob();
+  return await new Promise((ok,fail)=>{ const r=new FileReader(); r.onload=()=>ok(r.result); r.onerror=fail; r.readAsDataURL(blob); });
+}
+// 備份檔把圖片轉回 base64 內嵌,這樣備份才是完整的
+$("#btnExport").onclick=async ()=>{
+  const btn=$("#btnExport"); btn.disabled=true; btn.textContent="匯出中…";
+  try{
+    const exercises=[];
+    for(const e of DB.exercises){
+      const c={...e};
+      if(c.imageData && !c.imageData.startsWith("data:")){ try{ c.imageData=await urlToDataUrl(c.imageData); }catch(_){ c.imageData=""; } }
+      exercises.push(c);
+    }
+    const blob=new Blob([JSON.stringify({exercises, menus:DB.menus},null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob); const a=document.createElement("a");
+    a.href=url; a.download="fitness-backup-"+new Date().toISOString().slice(0,10)+".json"; a.click();
+    URL.revokeObjectURL(url);
+  }finally{ btn.disabled=false; btn.textContent="匯出"; }
 };
 $("#btnImport").onclick=()=>$("#fileInput").click();
 $("#fileInput").onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
-  r.onload=()=>{ try{ const d=JSON.parse(r.result);
-    if(d.exercises&&d.menus){ if(confirm("匯入將覆蓋現有資料,確定?")){ DB=d; save(); render(); } }
-    else alert("檔案格式不正確"); }catch(err){ alert("讀取失敗"); } };
+  r.onload=async ()=>{
+    let d; try{ d=JSON.parse(r.result); }catch(err){ alert("讀取失敗"); return; }
+    if(!(d.exercises&&d.menus)){ alert("檔案格式不正確"); return; }
+    if(!confirm("匯入會取代雲端上現有的所有動作與菜單,確定?")) return;
+    setBanner("匯入中…");
+    const oldEx=DB.exercises.slice(), oldMenuIds=DB.menus.map(m=>m.id);
+    try{
+      await bulkInsert(normalizeLegacy(d));      // 先寫入新的,成功後才刪舊的,中途失敗不會弄丟資料
+      if(oldMenuIds.length){ const x=await sb.from("menus").delete().in("id",oldMenuIds); if(x.error) throw x.error; }
+      if(oldEx.length){ const x=await sb.from("exercises").delete().in("id",oldEx.map(e=>e.id)); if(x.error) throw x.error; }
+      const paths=oldEx.map(e=>e.imagePath).filter(Boolean);
+      if(paths.length) await sb.storage.from(BUCKET).remove(paths);
+      DB=await loadAll(); writeCache(); setBanner(""); render();
+    }catch(err){ setBanner(""); alert("匯入失敗:"+errMsg(err)); }
+  };
   r.readAsText(f); e.target.value="";
 };
 
-/* ---------------- 啟動 ---------------- */
-render();
+/* ---------------- 登入 / 同步 / 啟動 ---------------- */
+function setBanner(t){ const b=$("#banner"); b.textContent=t||""; b.hidden=!t; }
+function showLogin(msg){ $("#login").classList.add("open"); $("#lgErr").textContent=msg||""; }
+const seededKey = () => "fitness_seeded_"+USER.id;
+
+async function startApp(){
+  const cached=readCache();
+  if(cached) DB=cached;
+  render();                                   // 先用上次的資料畫出來,讓畫面立刻有東西
+  setBanner("同步中…");
+  try{
+    let data=await loadAll();
+    const empty=!data.exercises.length && !data.menus.length;
+    if(empty && !localStorage.getItem(seededKey())){
+      setBanner("第一次登入,建立資料中…");
+      await firstTimeSetup();
+      data=await loadAll();
+    }
+    if(data.exercises.length || data.menus.length) localStorage.setItem(seededKey(),"1");
+    DB=data; writeCache(); setBanner("");
+  }catch(err){
+    setBanner(cached ? "離線中:顯示上次的資料,暫時無法儲存" : "無法讀取雲端資料:"+errMsg(err));
+  }
+  render();
+}
+
+$("#loginForm").onsubmit=async ev=>{
+  ev.preventDefault();
+  const btn=$("#lgBtn"); btn.disabled=true; btn.textContent="登入中…"; $("#lgErr").textContent="";
+  const {data,error}=await sb.auth.signInWithPassword({ email:$("#lgEmail").value.trim(), password:$("#lgPass").value });
+  btn.disabled=false; btn.textContent="登入";
+  if(error){ $("#lgErr").textContent="登入失敗:"+errMsg(error); return; }
+  USER=data.user; $("#lgPass").value=""; $("#login").classList.remove("open");
+  await startApp();
+};
+$("#btnLogout").onclick=async ()=>{
+  if(!confirm("確定登出?")) return;
+  await sb.auth.signOut({scope:"local"});      // 只登出這台裝置,不影響其他裝置
+  try{ localStorage.removeItem(CACHE_KEY); }catch(e){}
+  USER=null; DB={exercises:[],menus:[]}; $("#app").innerHTML=""; setBanner(""); showLogin();
+};
+
+async function boot(){
+  if(!window.supabase){ showLogin("無法載入雲端元件,請檢查網路後重新整理"); return; }
+  sb=window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  const {data}=await sb.auth.getSession();
+  if(data && data.session){ USER=data.session.user; await startApp(); }
+  else showLogin();
+}
+boot();
 </script>
 </body>
 </html>

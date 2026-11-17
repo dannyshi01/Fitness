@@ -127,8 +127,12 @@
   .imgprev{width:100%; max-height:200px; object-fit:cover; border-radius:3px; margin-top:8px; display:block;}
   .imgrow{display:flex; gap:8px; align-items:center; margin-top:6px;}
   .link{color:var(--accent); text-decoration:none; font-weight:600;}
-  .setrow{display:grid; grid-template-columns:1fr 64px 64px auto; gap:8px; align-items:center; margin-bottom:8px;}
-  .setrow input{padding:8px; text-align:center;}
+  .setrow{display:grid; grid-template-columns:minmax(0,1fr) 84px 84px 36px; gap:8px; align-items:center; margin-bottom:8px;}
+  .setrow .btn{width:36px; padding:6px 0; text-align:center;}
+  .setrow input{padding:8px 4px; text-align:center; min-width:0;}
+  .setrow .nm{overflow:hidden; text-overflow:ellipsis;}
+  .sethead{margin-bottom:4px; font-family:var(--display); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; font-weight:600; text-align:center;}
+  .sethead span:first-child{text-align:left;}
   .setrow .nm{text-align:left; font-weight:600;}
   .pick{display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--hair);}
   .pick input[type=checkbox]{width:20px; height:20px; accent-color:var(--accent);}
@@ -440,6 +444,12 @@ const $ = s => document.querySelector(s);
 const esc = s => (s||"").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function exById(id){ return DB.exercises.find(e=>e.id===id); }
 
+// 組數 / 次數可自由輸入。純數字或範圍(4、4-5、6~8)會補上單位;文字(力竭、到失敗)照原樣顯示
+function fmtSR(v, unit){
+  v=(v||"").trim(); if(!v) return "";
+  return /^[\d.\s\-~–—到至+]+$/.test(v) ? v+unit : v;
+}
+
 // 把上傳圖片壓縮成最長邊 720px 的 JPEG,避免 localStorage 爆掉
 function compressImage(file, cb){
   const reader=new FileReader();
@@ -496,7 +506,7 @@ function renderMenus(){
     const items = m.items.map(it=>{
       const ex = exById(it.exId);
       if(!ex) return "";
-      const detail = [it.sets&&`${it.sets}組`, it.reps&&`${it.reps}下`, it.weight&&`${it.weight}`].filter(Boolean).join(" × ");
+      const detail = [fmtSR(it.sets,"組"), fmtSR(it.reps,"下"), it.weight].filter(Boolean).join(" × ");
       return `<div class="day-item"><span class="n">${esc(ex.name)}</span><span class="d">${esc(detail)}</span></div>`;
     }).join("");
     return `<div class="card">
@@ -696,8 +706,8 @@ function openMenuForm(id){
       const ex=exById(it.exId); if(!ex) return "";
       return `<div class="setrow">
         <div class="nm">${esc(ex.name)}</div>
-        <input data-f="sets" data-i="${i}" value="${esc(it.sets||"")}" placeholder="組" inputmode="numeric">
-        <input data-f="reps" data-i="${i}" value="${esc(it.reps||"")}" placeholder="次" inputmode="numeric">
+        <input data-f="sets" data-i="${i}" value="${esc(it.sets||"")}" placeholder="4-5" maxlength="20" autocomplete="off">
+        <input data-f="reps" data-i="${i}" value="${esc(it.reps||"")}" placeholder="6-8" maxlength="20" autocomplete="off">
         <button class="btn ghost sm" data-rm="${i}">✕</button>
       </div>`;
     }).join("");
@@ -707,7 +717,9 @@ function openMenuForm(id){
       <input id="mName" value="${esc(m.name)}" placeholder="例:週一 · 推日(胸肩三頭)">
       <label>備註</label>
       <input id="mNotes" value="${esc(m.notes)}" placeholder="例:每組間休息 90 秒">
-      <label style="margin-top:16px">動作清單 <span class="muted">(填組數 × 次數)</span></label>
+      <label style="margin-top:16px">動作清單</label>
+      <div class="hint" style="margin:-2px 0 8px">組數、次數可填數字、範圍(例:4-5、6-8)或文字(例:力竭、到失敗)</div>
+      ${rows?`<div class="setrow sethead"><span>動作</span><span>組數</span><span>次數</span><span></span></div>`:""}
       <div>${rows||'<div class="muted small" style="padding:6px 0">還沒加入動作</div>'}</div>
       <button class="btn" id="addItem" style="width:100%; margin-top:8px">＋ 從動作庫加入</button>
       <div class="row" style="margin-top:18px; gap:8px">

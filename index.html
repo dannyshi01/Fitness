@@ -90,7 +90,9 @@
   .sheet{background:var(--bg); width:100%; max-width:720px; max-height:92vh; overflow:auto;
     border-radius:0; border-top:2px solid var(--rule); padding:18px 16px calc(24px + env(safe-area-inset-bottom));}
   .sheet h3{font-family:var(--display); margin:0 0 4px; font-size:19px; font-weight:800;}
-  .sheethead{display:flex; align-items:center; margin-bottom:10px;}
+  .sheethead{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
+  .sheethead h3{margin:0; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .sheethead .btn{flex-shrink:0; min-height:36px;}
   .filters{display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:12px; -webkit-overflow-scrolling:touch;}
   .filters::-webkit-scrollbar{display:none;}
   .fchip{white-space:nowrap; background:transparent; border:1px solid var(--hair); color:var(--muted);
@@ -581,8 +583,7 @@ function openExerciseView(id){
     ? `<a class="btn primary v-video" href="${esc(e.sourceUrl)}" target="_blank" rel="noopener">🎬 開啟${e.source==="YouTube"?" YouTube":e.source==="IG"?" IG":""}影片 / 來源</a>`
     : (e.source?`<div class="v-src muted small">來源:${esc(e.source)}</div>`:"");
   openSheet(`
-    <div class="sheethead"><h3>${esc(e.name)}</h3><div class="spacer"></div>
-      <button class="btn ghost sm" id="cxx">關閉</button></div>
+    <div class="sheethead"><button class="btn ghost sm" id="cxx">← 返回</button><h3>${esc(e.name)}</h3></div>
     <div class="chips" style="margin:2px 0 12px">${cats}${eq}${tags}</div>
     ${img}
     ${video?`<div style="margin:${img?'12px':'0'} 0 4px">${video}</div>`:""}
@@ -618,8 +619,7 @@ function openExerciseForm(id){
   const eqOpts = ['<option value="">器材(選填)</option>',...EQUIP.map(x=>`<option ${e.equip===x?'selected':''}>${x}</option>`)].join("");
   const srcOpts = ['<option value="">來源(選填)</option>',...SOURCES.map(x=>`<option ${e.source===x?'selected':''}>${x}</option>`)].join("");
   openSheet(`
-    <div class="sheethead"><h3>${id?'編輯動作':'新增動作'}</h3><div class="spacer"></div>
-      <button class="btn ghost sm" id="cxx">取消</button></div>
+    <div class="sheethead"><button class="btn ghost sm" id="cxx">← 返回</button><h3>${id?'編輯動作':'新增動作'}</h3></div>
     <label>動作名稱 *</label>
     <input id="fName" value="${esc(e.name)}" placeholder="例:保加利亞分腿蹲" autofocus>
     <label>部位分類(肌群)<span class="muted">(可多選,先選一個也行)</span></label>
@@ -666,7 +666,7 @@ function openExerciseForm(id){
       $("#imgPrev").src=dataUrl; $("#imgPrev").style.display="block"; $("#clrImg").style.display="inline-flex"; });
     ev.target.value="";
   };
-  $("#cxx").onclick=closeSheet;
+  $("#cxx").onclick=()=>{ if(id) openExerciseView(id); else closeSheet(); };   // 編輯中返回 = 回到該動作的詳情
   if(id) $("#delEx").onclick=()=>deleteExercise(id);
   $("#saveEx").onclick=async ()=>{
     const name=$("#fName").value.trim();
@@ -702,8 +702,7 @@ function openMenuForm(id){
       </div>`;
     }).join("");
     openSheet(`
-      <div class="sheethead"><h3>${id?'編輯菜單':'新增菜單'}</h3><div class="spacer"></div>
-        <button class="btn ghost sm" id="cxx">取消</button></div>
+      <div class="sheethead"><button class="btn ghost sm" id="cxx">← 返回</button><h3>${id?'編輯菜單':'新增菜單'}</h3></div>
       <label>菜單名稱 *</label>
       <input id="mName" value="${esc(m.name)}" placeholder="例:週一 · 推日(胸肩三頭)">
       <label>備註</label>
@@ -775,8 +774,7 @@ function openPicker(already, cb){
     }).join("") || '<div class="empty small">沒有符合的動作,換個篩選或先去動作庫新增</div>';
 
     openSheet(`
-      <div class="sheethead"><h3>選擇動作</h3><div class="spacer"></div>
-        <button class="btn ghost sm" id="pclose">關閉</button></div>
+      <div class="sheethead"><button class="btn ghost sm" id="pclose">← 返回</button><h3>選擇動作</h3></div>
       <input id="pq" placeholder="搜尋動作名稱 / 筆記…" value="${esc(q)}" style="margin-bottom:10px">
       <div class="pk-flabel">部位</div>
       <div class="filters">${catChips}</div>

@@ -90,7 +90,9 @@
   .sheet{background:var(--bg); width:100%; max-width:720px; max-height:92vh; overflow:auto;
     border-radius:0; border-top:2px solid var(--rule); padding:18px 16px calc(24px + env(safe-area-inset-bottom));}
   .sheet h3{font-family:var(--display); margin:0 0 4px; font-size:19px; font-weight:800;}
-  .sheethead{display:flex; align-items:center; margin-bottom:10px;}
+  .sheethead{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
+  .sheethead h3{margin:0; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .sheethead .btn{flex-shrink:0; min-height:36px;}
   .filters{display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:12px; -webkit-overflow-scrolling:touch;}
   .filters::-webkit-scrollbar{display:none;}
   .fchip{white-space:nowrap; background:transparent; border:1px solid var(--hair); color:var(--muted);
@@ -125,8 +127,12 @@
   .imgprev{width:100%; max-height:200px; object-fit:cover; border-radius:3px; margin-top:8px; display:block;}
   .imgrow{display:flex; gap:8px; align-items:center; margin-top:6px;}
   .link{color:var(--accent); text-decoration:none; font-weight:600;}
-  .setrow{display:grid; grid-template-columns:1fr 64px 64px auto; gap:8px; align-items:center; margin-bottom:8px;}
-  .setrow input{padding:8px; text-align:center;}
+  .setrow{display:grid; grid-template-columns:minmax(0,1fr) 84px 84px 36px; gap:8px; align-items:center; margin-bottom:8px;}
+  .setrow .btn{width:36px; padding:6px 0; text-align:center;}
+  .setrow input{padding:8px 4px; text-align:center; min-width:0;}
+  .setrow .nm{overflow:hidden; text-overflow:ellipsis;}
+  .sethead{margin-bottom:4px; font-family:var(--display); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; font-weight:600; text-align:center;}
+  .sethead span:first-child{text-align:left;}
   .setrow .nm{text-align:left; font-weight:600;}
   .pick{display:flex; align-items:center; gap:10px; padding:11px 2px; border-bottom:1px solid var(--hair);}
   .pick input[type=checkbox]{width:20px; height:20px; accent-color:var(--accent);}
@@ -438,6 +444,12 @@ const $ = s => document.querySelector(s);
 const esc = s => (s||"").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function exById(id){ return DB.exercises.find(e=>e.id===id); }
 
+// 組數 / 次數可自由輸入。純數字或範圍(4、4-5、6~8)會補上單位;文字(力竭、到失敗)照原樣顯示
+function fmtSR(v, unit){
+  v=(v||"").trim(); if(!v) return "";
+  return /^[\d.\s\-~–—到至+]+$/.test(v) ? v+unit : v;
+}
+
 // 把上傳圖片壓縮成最長邊 720px 的 JPEG,避免 localStorage 爆掉
 function compressImage(file, cb){
   const reader=new FileReader();
@@ -494,7 +506,7 @@ function renderMenus(){
     const items = m.items.map(it=>{
       const ex = exById(it.exId);
       if(!ex) return "";
-      const detail = [it.sets&&`${it.sets}組`, it.reps&&`${it.reps}下`, it.weight&&`${it.weight}`].filter(Boolean).join(" × ");
+      const detail = [fmtSR(it.sets,"組"), fmtSR(it.reps,"下"), it.weight].filter(Boolean).join(" × ");
       return `<div class="day-item"><span class="n">${esc(ex.name)}</span><span class="d">${esc(detail)}</span></div>`;
     }).join("");
     return `<div class="card">
@@ -581,8 +593,7 @@ function openExerciseView(id){
     ? `<a class="btn primary v-video" href="${esc(e.sourceUrl)}" target="_blank" rel="noopener">🎬 開啟${e.source==="YouTube"?" YouTube":e.source==="IG"?" IG":""}影片 / 來源</a>`
     : (e.source?`<div class="v-src muted small">來源:${esc(e.source)}</div>`:"");
   openSheet(`
-    <div class="sheethead"><h3>${esc(e.name)}</h3><div class="spacer"></div>
-      <button class="btn ghost sm" id="cxx">關閉</button></div>
+    <div class="sheethead"><button class="btn ghost sm" id="cxx">← 返回</button><h3>${esc(e.name)}</h3></div>
     <div class="chips" style="margin:2px 0 12px">${cats}${eq}${tags}</div>
     ${img}
     ${video?`<div style="margin:${img?'12px':'0'} 0 4px">${video}</div>`:""}
@@ -618,8 +629,7 @@ function openExerciseForm(id){
   const eqOpts = ['<option value="">器材(選填)</option>',...EQUIP.map(x=>`<option ${e.equip===x?'selected':''}>${x}</option>`)].join("");
   const srcOpts = ['<option value="">來源(選填)</option>',...SOURCES.map(x=>`<option ${e.source===x?'selected':''}>${x}</option>`)].join("");
   openSheet(`
-    <div class="sheethead"><h3>${id?'編輯動作':'新增動作'}</h3><div class="spacer"></div>
-      <button class="btn ghost sm" id="cxx">取消</button></div>
+    <div class="sheethead"><button class="btn ghost sm" id="cxx">← 返回</button><h3>${id?'編輯動作':'新增動作'}</h3></div>
     <label>動作名稱 *</label>
     <input id="fName" value="${esc(e.name)}" placeholder="例:保加利亞分腿蹲" autofocus>
     <label>部位分類(肌群)<span class="muted">(可多選,先選一個也行)</span></label>
@@ -666,7 +676,7 @@ function openExerciseForm(id){
       $("#imgPrev").src=dataUrl; $("#imgPrev").style.display="block"; $("#clrImg").style.display="inline-flex"; });
     ev.target.value="";
   };
-  $("#cxx").onclick=closeSheet;
+  $("#cxx").onclick=()=>{ if(id) openExerciseView(id); else closeSheet(); };   // 編輯中返回 = 回到該動作的詳情
   if(id) $("#delEx").onclick=()=>deleteExercise(id);
   $("#saveEx").onclick=async ()=>{
     const name=$("#fName").value.trim();
@@ -696,19 +706,20 @@ function openMenuForm(id){
       const ex=exById(it.exId); if(!ex) return "";
       return `<div class="setrow">
         <div class="nm">${esc(ex.name)}</div>
-        <input data-f="sets" data-i="${i}" value="${esc(it.sets||"")}" placeholder="組" inputmode="numeric">
-        <input data-f="reps" data-i="${i}" value="${esc(it.reps||"")}" placeholder="次" inputmode="numeric">
+        <input data-f="sets" data-i="${i}" value="${esc(it.sets||"")}" placeholder="4-5" maxlength="20" autocomplete="off">
+        <input data-f="reps" data-i="${i}" value="${esc(it.reps||"")}" placeholder="6-8" maxlength="20" autocomplete="off">
         <button class="btn ghost sm" data-rm="${i}">✕</button>
       </div>`;
     }).join("");
     openSheet(`
-      <div class="sheethead"><h3>${id?'編輯菜單':'新增菜單'}</h3><div class="spacer"></div>
-        <button class="btn ghost sm" id="cxx">取消</button></div>
+      <div class="sheethead"><button class="btn ghost sm" id="cxx">← 返回</button><h3>${id?'編輯菜單':'新增菜單'}</h3></div>
       <label>菜單名稱 *</label>
       <input id="mName" value="${esc(m.name)}" placeholder="例:週一 · 推日(胸肩三頭)">
       <label>備註</label>
       <input id="mNotes" value="${esc(m.notes)}" placeholder="例:每組間休息 90 秒">
-      <label style="margin-top:16px">動作清單 <span class="muted">(填組數 × 次數)</span></label>
+      <label style="margin-top:16px">動作清單</label>
+      <div class="hint" style="margin:-2px 0 8px">組數、次數可填數字、範圍(例:4-5、6-8)或文字(例:力竭、到失敗)</div>
+      ${rows?`<div class="setrow sethead"><span>動作</span><span>組數</span><span>次數</span><span></span></div>`:""}
       <div>${rows||'<div class="muted small" style="padding:6px 0">還沒加入動作</div>'}</div>
       <button class="btn" id="addItem" style="width:100%; margin-top:8px">＋ 從動作庫加入</button>
       <div class="row" style="margin-top:18px; gap:8px">
@@ -775,8 +786,7 @@ function openPicker(already, cb){
     }).join("") || '<div class="empty small">沒有符合的動作,換個篩選或先去動作庫新增</div>';
 
     openSheet(`
-      <div class="sheethead"><h3>選擇動作</h3><div class="spacer"></div>
-        <button class="btn ghost sm" id="pclose">關閉</button></div>
+      <div class="sheethead"><button class="btn ghost sm" id="pclose">← 返回</button><h3>選擇動作</h3></div>
       <input id="pq" placeholder="搜尋動作名稱 / 筆記…" value="${esc(q)}" style="margin-bottom:10px">
       <div class="pk-flabel">部位</div>
       <div class="filters">${catChips}</div>
